@@ -7,32 +7,20 @@ pub trait JsonBuilder {
 pub struct JsonObjectWriter {
     first_element: bool,
     raw: Vec<u8>,
-    last_element: u8,
 }
 
 impl JsonObjectWriter {
-    pub fn as_object() -> Self {
+    pub fn new() -> Self {
         let mut raw = Vec::new();
         raw.push('{' as u8);
         Self {
             raw,
             first_element: true,
-            last_element: '}' as u8,
         }
     }
 
     pub fn has_written(&self) -> bool {
         !self.first_element
-    }
-
-    pub fn as_array() -> Self {
-        let mut raw = Vec::new();
-        raw.push('[' as u8);
-        Self {
-            raw,
-            first_element: true,
-            last_element: ']' as u8,
-        }
     }
 
     fn add_delimetr(&mut self) {
@@ -92,7 +80,7 @@ impl JsonObjectWriter {
     }
 
     pub fn build(mut self) -> Vec<u8> {
-        self.raw.push(self.last_element);
+        self.raw.push('}' as u8);
         self.raw
     }
 }
