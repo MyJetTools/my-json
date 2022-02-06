@@ -77,11 +77,15 @@ impl<'s> JsonObjectWriter<'s> {
         self.raw.extend(raw);
     }
 
-    pub fn start_writing_object(&'s mut self) -> JsonObjectWriter<'s> {
+    pub fn start_writing_object(&'s mut self, key: &str) -> JsonObjectWriter<'s> {
+        self.add_delimetr();
+        self.write_key(key);
         JsonObjectWriter::new(self.raw)
     }
 
-    pub fn start_writing_array(&'s mut self) -> JsonArrayWriter<'s> {
+    pub fn start_writing_array(&'s mut self, key: &str) -> JsonArrayWriter<'s> {
+        self.add_delimetr();
+        self.write_key(key);
         JsonArrayWriter::new(self.raw)
     }
 }

@@ -49,10 +49,12 @@ impl<'s> JsonArrayWriter<'s> {
     }
 
     pub fn start_writing_object(&'s mut self) -> JsonObjectWriter<'s> {
+        self.add_delimetr();
         JsonObjectWriter::new(self.raw)
     }
 
     pub fn start_writing_array(&'s mut self) -> JsonArrayWriter<'s> {
+        self.add_delimetr();
         JsonArrayWriter::new(self.raw)
     }
 }
