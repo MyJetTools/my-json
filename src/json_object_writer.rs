@@ -39,6 +39,13 @@ impl JsonObjectWriter {
         }
     }
 
+    fn write_key(&mut self, key: &str) {
+        self.raw.push('"' as u8);
+        self.raw
+            .extend_from_slice(EscapedJsonString::new(key).as_slice());
+        self.raw.push('"' as u8);
+    }
+
     pub fn write_string_element(&mut self, value: &str) {
         self.add_delimetr();
         let data_to_add = format!("\"{}\"", EscapedJsonString::new(value).as_str());
@@ -47,11 +54,14 @@ impl JsonObjectWriter {
 
     pub fn write_empty_array(&mut self, key: &str) {
         self.add_delimetr();
-        self.raw.push('"' as u8);
-        self.raw
-            .extend_from_slice(EscapedJsonString::new(key).as_slice());
-        self.raw.push('"' as u8);
+        self.write_key(key);
         self.raw.extend_from_slice(":[]".as_bytes());
+    }
+
+    pub fn write_null_value(&mut self, key: &str) {
+        self.add_delimetr();
+        self.write_key(key);
+        self.raw.extend_from_slice(":null".as_bytes());
     }
 
     pub fn write_number_element(&mut self, value: String) {
