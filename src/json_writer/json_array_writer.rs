@@ -1,15 +1,14 @@
 use crate::EscapedJsonString;
 
-use super::JsonBuilder;
+use super::JsonObjectWriter;
 
-pub struct JsonArrayWriter {
-    raw: Vec<u8>,
+pub struct JsonArrayWriter<'s> {
+    raw: &'s mut Vec<u8>,
     first_element: bool,
 }
 
-impl JsonArrayWriter {
-    pub fn new() -> Self {
-        let mut raw = Vec::new();
+impl<'s> JsonArrayWriter<'s> {
+    pub fn new(raw: &'s mut Vec<u8>) -> Self {
         raw.push('[' as u8);
 
         Self {
@@ -49,15 +48,17 @@ impl JsonArrayWriter {
         self.raw.extend_from_slice(raw);
     }
 
-    pub fn write_object<TJsonBuilder: JsonBuilder>(&mut self, object: TJsonBuilder) {
-        self.add_delimetr();
-        self.raw.extend(object.build());
+    pub fn start_writing_object(&'s mut self) -> JsonObjectWriter<'s> {
+        JsonObjectWriter::new(self.raw)
+    }
+
+    pub fn start_writing_array(&'s mut self) -> JsonArrayWriter<'s> {
+        JsonArrayWriter::new(self.raw)
     }
 }
 
-impl JsonBuilder for JsonArrayWriter {
-    fn build(mut self) -> Vec<u8> {
+impl<'s> Drop for JsonArrayWriter<'s> {
+    fn drop(&mut self) {
         self.raw.push(']' as u8);
-        self.raw
     }
 }

@@ -1,17 +1,14 @@
 use crate::EscapedJsonString;
 
-pub trait JsonBuilder {
-    fn build(self) -> Vec<u8>;
-}
+use super::JsonArrayWriter;
 
-pub struct JsonObjectWriter {
+pub struct JsonObjectWriter<'s> {
     first_element: bool,
-    raw: Vec<u8>,
+    raw: &'s mut Vec<u8>,
 }
 
-impl JsonObjectWriter {
-    pub fn new() -> Self {
-        let mut raw = Vec::new();
+impl<'s> JsonObjectWriter<'s> {
+    pub fn new(raw: &'s mut Vec<u8>) -> Self {
         raw.push('{' as u8);
         Self {
             raw,
@@ -50,11 +47,6 @@ impl JsonObjectWriter {
         self.raw.extend_from_slice("null".as_bytes());
     }
 
-    pub fn write_array_object_element(&mut self, object: JsonObjectWriter) {
-        self.add_delimetr();
-        self.raw.extend(object.build());
-    }
-
     pub fn write_string_value(&mut self, key: &str, value: &str) {
         self.add_delimetr();
 
@@ -85,20 +77,17 @@ impl JsonObjectWriter {
         self.raw.extend(raw);
     }
 
-    pub fn write_object<TJsonBuilder: JsonBuilder>(&mut self, key: &str, object: TJsonBuilder) {
-        self.add_delimetr();
-        self.write_key(key);
-        self.raw.extend(object.build());
+    pub fn start_writing_object(&'s mut self) -> JsonObjectWriter<'s> {
+        JsonObjectWriter::new(self.raw)
     }
 
-    pub fn build(mut self) -> Vec<u8> {
-        self.raw.push('}' as u8);
-        self.raw
+    pub fn start_writing_array(&'s mut self) -> JsonArrayWriter<'s> {
+        JsonArrayWriter::new(self.raw)
     }
 }
 
-impl JsonBuilder for JsonObjectWriter {
-    fn build(self) -> Vec<u8> {
-        self.build()
+impl<'s> Drop for JsonObjectWriter<'s> {
+    fn drop(&mut self) {
+        self.raw.push('}' as u8)
     }
 }
