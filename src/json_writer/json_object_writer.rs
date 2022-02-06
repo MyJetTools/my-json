@@ -1,5 +1,9 @@
 use crate::EscapedJsonString;
 
+pub trait JsonBuilder {
+    fn build(self) -> Vec<u8>;
+}
+
 pub struct JsonObjectWriter {
     first_element: bool,
     raw: Vec<u8>,
@@ -46,12 +50,6 @@ impl JsonObjectWriter {
         self.raw.push('"' as u8);
     }
 
-    pub fn write_string_element(&mut self, value: &str) {
-        self.add_delimetr();
-        let data_to_add = format!("\"{}\"", EscapedJsonString::new(value).as_str());
-        self.raw.extend(data_to_add.into_bytes());
-    }
-
     pub fn write_empty_array(&mut self, key: &str) {
         self.add_delimetr();
         self.write_key(key);
@@ -62,12 +60,6 @@ impl JsonObjectWriter {
         self.add_delimetr();
         self.write_key(key);
         self.raw.extend_from_slice(":null".as_bytes());
-    }
-
-    pub fn write_number_element(&mut self, value: String) {
-        self.add_delimetr();
-
-        self.raw.extend(value.into_bytes());
     }
 
     pub fn write_array_object_element(&mut self, object: JsonObjectWriter) {
@@ -91,15 +83,17 @@ impl JsonObjectWriter {
         self.raw.extend(data_to_add.into_bytes());
     }
 
-    pub fn write_object(&mut self, key: &str, object: JsonObjectWriter) {
+    pub fn write_object<TJsonBuilder: JsonBuilder>(&mut self, key: &str, object: TJsonBuilder) {
         self.add_delimetr();
         let data_to_add = format!("\"{}\":", EscapedJsonString::new(key).as_str());
 
         self.raw.extend(data_to_add.into_bytes());
         self.raw.extend(object.build());
     }
+}
 
-    pub fn build(mut self) -> Vec<u8> {
+impl JsonBuilder for JsonObjectWriter {
+    fn build(mut self) -> Vec<u8> {
         self.raw.push(self.last_element);
         self.raw
     }
