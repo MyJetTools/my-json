@@ -90,11 +90,15 @@ impl JsonObjectWriter {
         self.raw.extend(data_to_add.into_bytes());
         self.raw.extend(object.build());
     }
+
+    pub fn build(mut self) -> Vec<u8> {
+        self.raw.push(self.last_element);
+        self.raw
+    }
 }
 
 impl JsonBuilder for JsonObjectWriter {
-    fn build(mut self) -> Vec<u8> {
-        self.raw.push(self.last_element);
-        self.raw
+    fn build(self) -> Vec<u8> {
+        self.build()
     }
 }
