@@ -34,7 +34,7 @@ impl JsonArrayWithNonObjectsWriter {
         self.raw.push('"' as u8);
     }
 
-    pub fn write_null_element(&mut self, value: &str) {
+    pub fn write_null_element(&mut self) {
         self.add_delimetr();
         self.raw.extend_from_slice("null".as_bytes());
     }
