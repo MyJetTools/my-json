@@ -52,6 +52,18 @@ impl<'s> EscapedJsonString<'s> {
 
         panic!("EscapedJsonString is not initialized properly");
     }
+
+    pub fn as_slice(&'s self) -> &'s [u8] {
+        if let Some(as_slice) = self.as_slice {
+            return as_slice.as_bytes();
+        }
+
+        if let Some(as_string) = &self.as_string {
+            return as_string.as_bytes();
+        }
+
+        panic!("EscapedJsonString is not initialized properly");
+    }
 }
 
 fn has_to_escape(src: &[u8]) -> bool {

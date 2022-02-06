@@ -45,6 +45,15 @@ impl JsonObjectWriter {
         self.raw.extend(data_to_add.into_bytes());
     }
 
+    pub fn write_empty_array(&mut self, value: &str) {
+        self.add_delimetr();
+        self.raw.push('"' as u8);
+        self.raw
+            .extend_from_slice(EscapedJsonString::new(value).as_slice());
+        self.raw.push('"' as u8);
+        self.raw.extend_from_slice(":[]".as_bytes());
+    }
+
     pub fn write_number_element(&mut self, value: String) {
         self.add_delimetr();
 
