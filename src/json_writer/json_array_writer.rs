@@ -44,7 +44,7 @@ impl JsonArrayWriter {
         self.raw.extend_from_slice(number.as_bytes());
     }
 
-    pub fn write_object<TJsonBuilder: JsonBuilder>(&mut self, key: &str, object: TJsonBuilder) {
+    pub fn write_object<TJsonBuilder: JsonBuilder>(&mut self, object: TJsonBuilder) {
         self.add_delimetr();
         self.raw.extend(object.build());
     }
