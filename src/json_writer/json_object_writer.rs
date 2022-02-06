@@ -35,19 +35,19 @@ impl JsonObjectWriter {
         self.raw.push('"' as u8);
         self.raw
             .extend_from_slice(EscapedJsonString::new(key).as_slice());
-        self.raw.push('"' as u8);
+        self.raw.extend_from_slice("\":".as_bytes());
     }
 
     pub fn write_empty_array(&mut self, key: &str) {
         self.add_delimetr();
         self.write_key(key);
-        self.raw.extend_from_slice(":[]".as_bytes());
+        self.raw.extend_from_slice("[]".as_bytes());
     }
 
     pub fn write_null_value(&mut self, key: &str) {
         self.add_delimetr();
         self.write_key(key);
-        self.raw.extend_from_slice(":null".as_bytes());
+        self.raw.extend_from_slice("null".as_bytes());
     }
 
     pub fn write_array_object_element(&mut self, object: JsonObjectWriter) {
@@ -57,25 +57,37 @@ impl JsonObjectWriter {
 
     pub fn write_string_value(&mut self, key: &str, value: &str) {
         self.add_delimetr();
-        let data_to_add = format!(
-            "\"{}\":\"{}\"",
-            EscapedJsonString::new(key).as_str(),
-            EscapedJsonString::new(value).as_str()
-        );
-        self.raw.extend(data_to_add.into_bytes());
+
+        self.write_key(key);
+
+        self.raw.push('"' as u8);
+        self.raw
+            .extend_from_slice(EscapedJsonString::new(value).as_slice());
+        self.raw.push('"' as u8);
     }
 
     pub fn write_bool_value(&mut self, key: &str, value: bool) {
         self.add_delimetr();
-        let data_to_add = format!("\"{}\":{}", EscapedJsonString::new(key).as_str(), value);
-        self.raw.extend(data_to_add.into_bytes());
+        self.write_key(key);
+
+        if value {
+            self.raw.extend_from_slice("true".as_bytes())
+        } else {
+            self.raw.extend_from_slice("false".as_bytes())
+        }
+    }
+
+    pub fn write_raw_value(&mut self, key: &str, raw: &[u8]) {
+        self.add_delimetr();
+
+        self.write_key(key);
+
+        self.raw.extend(raw);
     }
 
     pub fn write_object<TJsonBuilder: JsonBuilder>(&mut self, key: &str, object: TJsonBuilder) {
         self.add_delimetr();
-        let data_to_add = format!("\"{}\":", EscapedJsonString::new(key).as_str());
-
-        self.raw.extend(data_to_add.into_bytes());
+        self.write_key(key);
         self.raw.extend(object.build());
     }
 
