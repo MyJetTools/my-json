@@ -1,8 +1,8 @@
 #[cfg(test)]
 use std::str::Utf8Error;
 
-use super::super::JsonParseError;
-use super::{super::consts, JsonValue};
+use super::super::consts;
+use super::super::{JsonParseError, JsonValue};
 
 pub struct JsonFirstLine<'t> {
     pub name_start: usize,
