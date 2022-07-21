@@ -14,6 +14,13 @@ impl<'s> JsonValue<'s> {
         super::date_time::parse(self.as_str()?.as_bytes())
     }
 
+    pub fn is_null(&self) -> bool {
+        match self {
+            JsonValue::Null => true,
+            _ => false,
+        }
+    }
+
     pub fn as_str(&self) -> Option<&'s str> {
         match self {
             JsonValue::Null => None,

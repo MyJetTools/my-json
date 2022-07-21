@@ -152,5 +152,12 @@ mod tests {
 
         assert_eq!("sellAmount", item.get_name().unwrap());
         assert_eq!("0.4", item.get_value().unwrap().as_str().unwrap());
+
+        let item = parser.next().unwrap().unwrap();
+
+        assert_eq!("buyAmount", item.get_name().unwrap());
+
+        let value = item.get_value().unwrap();
+        assert!(value.is_null());
     }
 }
