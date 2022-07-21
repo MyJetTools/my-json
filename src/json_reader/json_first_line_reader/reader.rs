@@ -133,4 +133,24 @@ mod tests {
 
         assert_eq!(true, item.is_none());
     }
+
+    #[test]
+    fn test_json_first_line() {
+        let fist_line = r#"{"processId":"8269e2ac-fa3b-419a-8e65-1a606ba07942","sellAmount":0.4,"buyAmount":null,"sellAsset":"ETH","buyAsset":"USDT"}"#;
+
+        let mut parser = JsonFirstLineReader::new(fist_line.as_bytes());
+
+        let item = parser.next().unwrap().unwrap();
+
+        assert_eq!("processId", item.get_name().unwrap());
+        assert_eq!(
+            "8269e2ac-fa3b-419a-8e65-1a606ba07942",
+            item.get_value().unwrap().as_str().unwrap()
+        );
+
+        let item = parser.next().unwrap().unwrap();
+
+        assert_eq!("sellAmount", item.get_name().unwrap());
+        assert_eq!("0.4", item.get_value().unwrap().as_str().unwrap());
+    }
 }

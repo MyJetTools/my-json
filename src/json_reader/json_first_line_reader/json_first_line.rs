@@ -100,7 +100,11 @@ fn is_null(src: &[u8]) -> bool {
 }
 
 fn is_number(src: &[u8]) -> bool {
-    return src[0] >= '0' as u8 && src[9] <= '9' as u8;
+    if src[0] == '.' as u8 {
+        return true;
+    }
+
+    return src[0] >= '0' as u8 && src[0] <= '9' as u8;
 }
 
 const TRUE_LC: [u8; 4] = [b't', b'r', b'u', b'e'];
