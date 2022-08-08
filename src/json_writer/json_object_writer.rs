@@ -97,8 +97,8 @@ impl JsonBuilder for JsonObjectWriter {
         self.build()
     }
 
-    fn build_and_get_slice(&mut self) -> &[u8] {
-        self.raw.push('}' as u8);
-        self.raw.as_slice()
+    fn build_into(&self, dest: &mut Vec<u8>) {
+        dest.extend_from_slice(self.raw.as_slice());
+        dest.push('}' as u8);
     }
 }
