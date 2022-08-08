@@ -65,10 +65,8 @@ impl JsonBuilder for JsonArrayWriter {
         self.build()
     }
 
-    fn build_and_clone(&self) -> Vec<u8> {
-        let mut result = Vec::with_capacity(self.raw.len() + 1);
-        result.extend_from_slice(self.raw.as_slice());
-        result.push(']' as u8);
-        result
+    fn build_and_get_slice(&mut self) -> &[u8] {
+        self.raw.push(']' as u8);
+        self.raw.as_slice()
     }
 }
