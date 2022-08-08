@@ -90,6 +90,11 @@ impl JsonObjectWriter {
         self.raw.push('}' as u8);
         self.raw
     }
+
+    pub fn build_into(&self, dest: &mut Vec<u8>) {
+        dest.extend_from_slice(self.raw.as_slice());
+        dest.push('}' as u8);
+    }
 }
 
 impl JsonBuilder for JsonObjectWriter {
@@ -98,7 +103,6 @@ impl JsonBuilder for JsonObjectWriter {
     }
 
     fn build_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.raw.as_slice());
-        dest.push('}' as u8);
+        self.build_into(dest)
     }
 }

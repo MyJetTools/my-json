@@ -58,6 +58,11 @@ impl JsonArrayWriter {
         self.add_delimetr();
         self.raw.extend(value.build());
     }
+
+    pub fn build_into(&self, dest: &mut Vec<u8>) {
+        dest.extend_from_slice(self.raw.as_slice());
+        dest.push(']' as u8);
+    }
 }
 
 impl JsonBuilder for JsonArrayWriter {
@@ -66,7 +71,6 @@ impl JsonBuilder for JsonArrayWriter {
     }
 
     fn build_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.raw.as_slice());
-        dest.push(']' as u8);
+        self.build_into(dest)
     }
 }
