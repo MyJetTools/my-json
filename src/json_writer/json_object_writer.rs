@@ -96,4 +96,12 @@ impl JsonBuilder for JsonObjectWriter {
     fn build(self) -> Vec<u8> {
         self.build()
     }
+
+    fn build_and_clone(&self) -> Vec<u8> {
+        let mut result = Vec::with_capacity(self.raw.len() + 1);
+        result.extend_from_slice(self.raw.as_slice());
+        result.push('}' as u8);
+
+        result
+    }
 }
