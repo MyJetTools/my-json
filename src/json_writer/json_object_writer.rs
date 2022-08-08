@@ -78,6 +78,26 @@ impl JsonObjectWriter {
         self.raw.extend(raw);
     }
 
+    pub fn write_i64(&mut self, key: &str, value: i64) {
+        self.add_delimetr();
+
+        self.write_key(key);
+
+        let value = format!("{}", value);
+
+        self.raw.extend_from_slice(value.as_bytes());
+    }
+
+    pub fn write_u64(&mut self, key: &str, value: u64) {
+        self.add_delimetr();
+
+        self.write_key(key);
+
+        let value = format!("{}", value);
+
+        self.raw.extend_from_slice(value.as_bytes());
+    }
+
     pub fn write_object<TJsonBuilder: JsonBuilder>(&mut self, key: &str, value: TJsonBuilder) {
         self.add_delimetr();
 
