@@ -45,46 +45,145 @@ impl<'t> Iterator for JsonArrayIterator<'t> {
     type Item = Result<&'t [u8], JsonParseError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let result = self.init();
+        if self.pos == 0 {
+            if let Err(err) = self.init() {
+                return Some(Err(err));
+            }
+        } else {
+            self.pos = match super::json_utils::skip_whitespaces(self.data, self.pos + 1) {
+                Ok(value) => value,
+                Err(err) => return Some(Err(err)),
+            };
 
-        if let Err(err) = result {
-            return Some(Err(err));
-        }
+            let b = self.data[self.pos];
 
-        let mut start_pos = self.pos + 1;
-        loop {
-            let found_token_result =
-                super::json_utils::next_token_must_be(self.data, start_pos, consts::OPEN_BRACKET);
-
-            match found_token_result {
-                FoundResult::Ok(start_pos) => {
-                    let result = super::json_utils::read_json_object(self.data, start_pos);
-
-                    match result {
-                        Ok(pos) => {
-                            self.pos = pos;
-                            return Some(Ok(&self.data[start_pos..pos + 1]));
-                        }
-                        Err(err) => {
-                            return Some(Err(err));
-                        }
-                    }
-                }
-                FoundResult::InvalidTokenFound { found_token, pos } => {
-                    if found_token == consts::CLOSE_ARRAY {
-                        return None;
-                    } else if found_token == consts::COMMA {
-                        start_pos = pos + 1;
-                    } else {
-                        return Some(Err(
-                            JsonParseError::new(format!("Can not find open object token. We start searching at {} but found token '{}' at the pos {}", start_pos,found_token as char, pos))));
-                    }
-                }
-                FoundResult::EndOfJson => {
+            match b {
+                consts::CLOSE_ARRAY => {
                     return None;
+                }
+                consts::COMMA => {}
+                _ => {
+                    return Some(Err(JsonParseError::new(format!(
+                        "Invalid token found ['{}'] at position {}",
+                        b as char, self.pos
+                    ))));
                 }
             }
         }
+
+        let start_pos = match super::json_utils::skip_whitespaces(self.data, self.pos + 1) {
+            Ok(value) => value,
+            Err(err) => return Some(Err(err)),
+        };
+        let b = self.data[start_pos];
+
+        let end_of_item = match b {
+            consts::CLOSE_ARRAY => {
+                return None;
+            }
+            consts::DOUBLE_QUOTE => {
+                match super::json_utils::find_the_end_of_the_string(self.data, start_pos + 1) {
+                    Ok(value) => value,
+                    Err(err) => return Some(Err(err)),
+                }
+            }
+
+            consts::OPEN_BRACKET => {
+                match super::json_utils::read_json_object(self.data, start_pos) {
+                    Ok(value) => value,
+                    Err(err) => return Some(Err(err)),
+                }
+            }
+            consts::START_OF_NULL_UPPER_CASE => {
+                let end = start_pos + 3;
+                if end >= self.data.len() {
+                    return Some(Err(JsonParseError::new(format!(
+                        "Invalid token found ['{}'] at position {}",
+                        b as char, start_pos
+                    ))));
+                }
+
+                end
+            }
+
+            consts::START_OF_NULL_LOWER_CASE => {
+                let end = start_pos + 3;
+                if end >= self.data.len() {
+                    return Some(Err(JsonParseError::new(format!(
+                        "Invalid token found ['{}'] at position {}",
+                        b as char, start_pos
+                    ))));
+                }
+
+                end
+            }
+
+            consts::START_OF_TRUE_UPPER_CASE => {
+                let end = start_pos + 3;
+                if end >= self.data.len() {
+                    return Some(Err(JsonParseError::new(format!(
+                        "Invalid token found ['{}'] at position {}",
+                        b as char, start_pos
+                    ))));
+                }
+
+                end
+            }
+
+            consts::START_OF_TRUE_LOWER_CASE => {
+                let end = start_pos + 3;
+                if end >= self.data.len() {
+                    return Some(Err(JsonParseError::new(format!(
+                        "Invalid token found ['{}'] at position {}",
+                        b as char, start_pos
+                    ))));
+                }
+
+                end
+            }
+
+            consts::START_OF_FALSE_UPPER_CASE => {
+                let end = start_pos + 4;
+                if end >= self.data.len() {
+                    return Some(Err(JsonParseError::new(format!(
+                        "Invalid token found ['{}'] at position {}",
+                        b as char, start_pos
+                    ))));
+                }
+
+                end
+            }
+
+            consts::START_OF_FALSE_LOWER_CASE => {
+                let end = start_pos + 4;
+                if end >= self.data.len() {
+                    return Some(Err(JsonParseError::new(format!(
+                        "Invalid token found ['{}'] at position {}",
+                        b as char, start_pos
+                    ))));
+                }
+
+                end
+            }
+
+            _ => {
+                if super::json_utils::is_number(b) {
+                    match super::json_utils::find_the_end_of_the_number(self.data, start_pos) {
+                        Ok(value) => value,
+                        Err(err) => return Some(Err(err)),
+                    }
+                } else {
+                    return Some(Err(JsonParseError::new(format!(
+                        "Invalid token found '{}' at position {}",
+                        b as char, start_pos
+                    ))));
+                }
+            }
+        };
+
+        self.pos = end_of_item;
+        let result = &self.data[start_pos..end_of_item + 1];
+        return Some(Ok(result));
     }
 }
 
@@ -171,5 +270,25 @@ mod tests {
         }
 
         assert_eq!(0, i);
+    }
+
+    #[test]
+    pub fn parse_array_with_different_objects() {
+        let json = r###"["chat message",123,{"name":"chat"}, true, null]"###;
+
+        let mut result = Vec::new();
+
+        for sub_json in json.as_bytes().split_array_json_to_objects() {
+            let sub_json = sub_json.unwrap();
+
+            result.push(String::from_utf8(sub_json.to_vec()).unwrap());
+        }
+
+        assert_eq!("\"chat message\"", result.get(0).unwrap());
+        assert_eq!("123", result.get(1).unwrap());
+
+        assert_eq!("{\"name\":\"chat\"}", result.get(2).unwrap());
+        assert_eq!("true", result.get(3).unwrap());
+        assert_eq!("null", result.get(4).unwrap());
     }
 }
