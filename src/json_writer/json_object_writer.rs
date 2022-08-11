@@ -88,6 +88,26 @@ impl JsonObjectWriter {
         self.raw.extend_from_slice(value.as_bytes());
     }
 
+    pub fn write_usize(&mut self, key: &str, value: usize) {
+        self.add_delimetr();
+
+        self.write_key(key);
+
+        let value = format!("{}", value);
+
+        self.raw.extend_from_slice(value.as_bytes());
+    }
+
+    pub fn write_isize(&mut self, key: &str, value: isize) {
+        self.add_delimetr();
+
+        self.write_key(key);
+
+        let value = format!("{}", value);
+
+        self.raw.extend_from_slice(value.as_bytes());
+    }
+
     pub fn write_i64(&mut self, key: &str, value: i64) {
         self.add_delimetr();
 
