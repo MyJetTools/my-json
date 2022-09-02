@@ -78,6 +78,56 @@ impl JsonObjectWriter {
         self.raw.extend(raw);
     }
 
+    pub fn write_f64(&mut self, key: &str, value: f64) {
+        self.add_delimetr();
+
+        self.write_key(key);
+
+        let value = format!("{}", value);
+
+        self.raw.extend_from_slice(value.as_bytes());
+    }
+
+    pub fn write_usize(&mut self, key: &str, value: usize) {
+        self.add_delimetr();
+
+        self.write_key(key);
+
+        let value = format!("{}", value);
+
+        self.raw.extend_from_slice(value.as_bytes());
+    }
+
+    pub fn write_isize(&mut self, key: &str, value: isize) {
+        self.add_delimetr();
+
+        self.write_key(key);
+
+        let value = format!("{}", value);
+
+        self.raw.extend_from_slice(value.as_bytes());
+    }
+
+    pub fn write_i64(&mut self, key: &str, value: i64) {
+        self.add_delimetr();
+
+        self.write_key(key);
+
+        let value = format!("{}", value);
+
+        self.raw.extend_from_slice(value.as_bytes());
+    }
+
+    pub fn write_u64(&mut self, key: &str, value: u64) {
+        self.add_delimetr();
+
+        self.write_key(key);
+
+        let value = format!("{}", value);
+
+        self.raw.extend_from_slice(value.as_bytes());
+    }
+
     pub fn write_object<TJsonBuilder: JsonBuilder>(&mut self, key: &str, value: TJsonBuilder) {
         self.add_delimetr();
 
@@ -90,10 +140,19 @@ impl JsonObjectWriter {
         self.raw.push('}' as u8);
         self.raw
     }
+
+    pub fn build_into(&self, dest: &mut Vec<u8>) {
+        dest.extend_from_slice(self.raw.as_slice());
+        dest.push('}' as u8);
+    }
 }
 
 impl JsonBuilder for JsonObjectWriter {
     fn build(self) -> Vec<u8> {
         self.build()
+    }
+
+    fn build_into(&self, dest: &mut Vec<u8>) {
+        self.build_into(dest)
     }
 }
