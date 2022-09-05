@@ -17,7 +17,7 @@ pub fn is_number(src: &[u8]) -> bool {
     return src[0] >= '0' as u8 && src[0] <= '9' as u8;
 }
 
-fn is_that_value(src_lc: &[u8], src_uc: &[u8], dest: &[u8]) -> bool {
+pub fn is_that_value(src_lc: &[u8], src_uc: &[u8], dest: &[u8]) -> bool {
     if src_lc.len() != dest.len() {
         return false;
     }
