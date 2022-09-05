@@ -10,11 +10,50 @@ pub fn is_null(src: &[u8]) -> bool {
 }
 
 pub fn is_number(src: &[u8]) -> bool {
-    if src[0] == '.' as u8 {
-        return true;
+    let mut dots = 0;
+
+    let mut es = 0;
+
+    for i in 0..src.len() {
+        if src[i] == '.' as u8 {
+            dots += 1;
+
+            if dots > 1 {
+                return false;
+            }
+            continue;
+        }
+
+        if src[i] == 'E' as u8 {
+            es += 1;
+
+            if es > 1 {
+                return false;
+            }
+
+            continue;
+        }
+
+        if src[i] == b'-' {
+            if i == 0 {
+                continue;
+            }
+            return false;
+        }
+
+        if src[i] == b'+' {
+            if i == 0 {
+                continue;
+            }
+            return false;
+        }
+
+        if !(src[i] >= '0' as u8 && src[i] <= '9' as u8) {
+            return false;
+        }
     }
 
-    return src[0] >= '0' as u8 && src[0] <= '9' as u8;
+    return true;
 }
 
 pub fn is_that_value(src_lc: &[u8], src_uc: &[u8], dest: &[u8]) -> bool {
@@ -64,5 +103,18 @@ mod test {
 
         assert_eq!(true, is_null("null".as_bytes()));
         assert_eq!(true, is_null("Null".as_bytes()));
+    }
+
+    #[test]
+    fn test_is_number() {
+        assert!(is_number("15.5".as_bytes()));
+
+        assert!(is_number("15".as_bytes()));
+
+        assert!(is_number("+15.5".as_bytes()));
+
+        assert!(is_number("-15.5".as_bytes()));
+
+        assert!(!is_number("10.0.0.3:5125".as_bytes()));
     }
 }
