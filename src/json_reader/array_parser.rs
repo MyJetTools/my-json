@@ -1,6 +1,6 @@
 pub use consts::*;
 
-use super::{consts, json_utils::FoundResult, JsonParseError};
+use super::{consts, read_json_object::FoundResult, JsonParseError};
 
 pub struct JsonArrayIterator<'t> {
     data: &'t [u8],
@@ -19,7 +19,7 @@ impl<'t> JsonArrayIterator<'t> {
             return Ok(());
         }
 
-        let result = super::json_utils::next_token_must_be(self.data, 0, consts::OPEN_ARRAY);
+        let result = super::read_json_object::next_token_must_be(self.data, 0, consts::OPEN_ARRAY);
 
         match result {
             FoundResult::Ok(pos) => {
@@ -50,7 +50,7 @@ impl<'t> Iterator for JsonArrayIterator<'t> {
                 return Some(Err(err));
             }
         } else {
-            self.pos = match super::json_utils::skip_whitespaces(self.data, self.pos + 1) {
+            self.pos = match super::read_json_object::skip_whitespaces(self.data, self.pos + 1) {
                 Ok(value) => value,
                 Err(err) => return Some(Err(err)),
             };
@@ -71,7 +71,7 @@ impl<'t> Iterator for JsonArrayIterator<'t> {
             }
         }
 
-        let start_pos = match super::json_utils::skip_whitespaces(self.data, self.pos + 1) {
+        let start_pos = match super::read_json_object::skip_whitespaces(self.data, self.pos + 1) {
             Ok(value) => value,
             Err(err) => return Some(Err(err)),
         };
@@ -82,14 +82,15 @@ impl<'t> Iterator for JsonArrayIterator<'t> {
                 return None;
             }
             consts::DOUBLE_QUOTE => {
-                match super::json_utils::find_the_end_of_the_string(self.data, start_pos + 1) {
+                match super::read_json_object::find_the_end_of_the_string(self.data, start_pos + 1)
+                {
                     Ok(value) => value,
                     Err(err) => return Some(Err(err)),
                 }
             }
 
             consts::OPEN_BRACKET => {
-                match super::json_utils::read_json_object(self.data, start_pos) {
+                match super::read_json_object::read_json_object(self.data, start_pos) {
                     Ok(value) => value,
                     Err(err) => return Some(Err(err)),
                 }
@@ -167,8 +168,9 @@ impl<'t> Iterator for JsonArrayIterator<'t> {
             }
 
             _ => {
-                if super::json_utils::is_number(b) {
-                    match super::json_utils::find_the_end_of_the_number(self.data, start_pos) {
+                if super::read_json_object::is_number(b) {
+                    match super::read_json_object::find_the_end_of_the_number(self.data, start_pos)
+                    {
                         Ok(value) => value,
                         Err(err) => return Some(Err(err)),
                     }

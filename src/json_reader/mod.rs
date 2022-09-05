@@ -3,7 +3,7 @@ pub mod consts;
 
 mod json_first_line_reader;
 mod json_parse_error;
-pub mod json_utils;
+mod read_json_object;
 
 pub use json_parse_error::JsonParseError;
 

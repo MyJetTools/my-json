@@ -48,15 +48,15 @@ impl<'t> JsonFirstLine<'t> {
     pub fn get_value(&self) -> Result<JsonValue<'t>, JsonParseError> {
         let value = &self.data[self.value_start..self.value_end];
 
-        if is_null(value) {
+        if crate::json_utils::is_null(value) {
             return Ok(JsonValue::Null);
         }
 
-        if let Some(value) = is_bool(value) {
+        if let Some(value) = crate::json_utils::is_bool(value) {
             return Ok(JsonValue::Boolean(value));
         }
 
-        if is_number(value) {
+        if crate::json_utils::is_number(value) {
             return Ok(JsonValue::Number(convert_to_utf8(value)?));
         }
 
@@ -85,74 +85,5 @@ fn convert_to_utf8(src: &[u8]) -> Result<&str, JsonParseError> {
             "Can convert value to utf8 string. Err {}",
             err
         ))),
-    }
-}
-
-const NULL_LC: [u8; 4] = [b'n', b'u', b'l', b'l'];
-const NULL_UC: [u8; 4] = [b'N', b'U', b'L', b'L'];
-
-fn is_null(src: &[u8]) -> bool {
-    if is_that_value(&NULL_LC, &NULL_UC, src) {
-        return true;
-    }
-
-    return false;
-}
-
-fn is_number(src: &[u8]) -> bool {
-    if src[0] == '.' as u8 {
-        return true;
-    }
-
-    return src[0] >= '0' as u8 && src[0] <= '9' as u8;
-}
-
-const TRUE_LC: [u8; 4] = [b't', b'r', b'u', b'e'];
-const TRUE_UC: [u8; 4] = [b'T', b'R', b'U', b'E'];
-
-const FALSE_LC: [u8; 5] = [b'f', b'a', b'l', b's', b'e'];
-const FALSE_UC: [u8; 5] = [b'F', b'A', b'L', b'S', b'E'];
-
-fn is_bool(src: &[u8]) -> Option<bool> {
-    if is_that_value(&TRUE_LC, &TRUE_UC, src) {
-        return Some(true);
-    }
-
-    if is_that_value(&FALSE_LC, &FALSE_UC, src) {
-        return Some(true);
-    }
-
-    None
-}
-
-fn is_that_value(src_lc: &[u8], src_uc: &[u8], dest: &[u8]) -> bool {
-    if src_lc.len() != dest.len() {
-        return false;
-    }
-
-    let mut pos = 0;
-
-    for b in dest {
-        if *b != src_lc[pos] && *b != src_uc[pos] {
-            return false;
-        }
-
-        pos += 1;
-    }
-
-    return true;
-}
-
-#[cfg(test)]
-mod test {
-
-    use super::*;
-
-    #[test]
-    fn test_null_str() {
-        assert_eq!(false, is_null("15".as_bytes()));
-
-        assert_eq!(true, is_null("null".as_bytes()));
-        assert_eq!(true, is_null("Null".as_bytes()));
     }
 }

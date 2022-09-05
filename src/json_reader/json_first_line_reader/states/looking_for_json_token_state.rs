@@ -1,4 +1,4 @@
-use super::super::super::json_utils::FoundResult;
+use super::super::super::read_json_object::FoundResult;
 use super::super::super::JsonParseError;
 pub struct LookingForJsonTokenState {
     pub pos: usize,
@@ -10,7 +10,8 @@ impl LookingForJsonTokenState {
         Self { pos, token }
     }
     pub fn read_next(&self, raw: &[u8]) -> Result<usize, JsonParseError> {
-        let result = super::super::super::json_utils::next_token_must_be(raw, self.pos, self.token);
+        let result =
+            super::super::super::read_json_object::next_token_must_be(raw, self.pos, self.token);
         match result {
             FoundResult::Ok(pos) => Ok(pos),
             FoundResult::EndOfJson => Err(JsonParseError::new(format!(

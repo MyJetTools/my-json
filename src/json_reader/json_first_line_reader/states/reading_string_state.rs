@@ -10,7 +10,7 @@ impl ReadingStringState {
     }
 
     pub fn read_next(&self, raw: &[u8]) -> Result<usize, JsonParseError> {
-        let result = super::super::super::json_utils::read_string(raw, self.pos);
+        let result = super::super::super::read_json_object::read_string(raw, self.pos);
 
         match result {
             Some(pos) => Ok(pos),

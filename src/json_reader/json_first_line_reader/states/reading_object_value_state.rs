@@ -10,6 +10,6 @@ impl ReadingObjectValueState {
     }
 
     pub fn read_next(&self, raw: &[u8]) -> Result<usize, JsonParseError> {
-        super::super::super::json_utils::read_json_object(raw, self.pos)
+        super::super::super::read_json_object::read_json_object(raw, self.pos)
     }
 }
