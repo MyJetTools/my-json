@@ -6,7 +6,10 @@ pub enum FoundResult {
     InvalidTokenFound { found_token: u8, pos: usize },
 }
 
-pub fn read_json_object(raw: &[u8], start_pos: usize) -> Result<usize, JsonParseError> {
+pub fn find_the_end_of_json_object_or_array(
+    raw: &[u8],
+    start_pos: usize,
+) -> Result<usize, JsonParseError> {
     let mut brackets = Vec::new();
 
     let b = raw[start_pos];

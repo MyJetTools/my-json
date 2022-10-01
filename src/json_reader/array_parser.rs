@@ -89,8 +89,19 @@ impl<'t> Iterator for JsonArrayIterator<'t> {
                 }
             }
 
+            consts::OPEN_ARRAY => {
+                match super::read_json_object::find_the_end_of_json_object_or_array(
+                    self.data, start_pos,
+                ) {
+                    Ok(value) => value,
+                    Err(err) => return Some(Err(err)),
+                }
+            }
+
             consts::OPEN_BRACKET => {
-                match super::read_json_object::read_json_object(self.data, start_pos) {
+                match super::read_json_object::find_the_end_of_json_object_or_array(
+                    self.data, start_pos,
+                ) {
                     Ok(value) => value,
                     Err(err) => return Some(Err(err)),
                 }
@@ -292,5 +303,30 @@ mod tests {
         assert_eq!("{\"name\":\"chat\"}", result.get(2).unwrap());
         assert_eq!("true", result.get(3).unwrap());
         assert_eq!("null", result.get(4).unwrap());
+    }
+
+    #[test]
+    pub fn parse_array_inside_array() {
+        let json = "[[19313.0,2.7731]]";
+
+        for itm in JsonArrayIterator::new(json.as_bytes()) {
+            let itm = itm.unwrap();
+            let mut i = 0;
+            for itm in JsonArrayIterator::new(itm) {
+                let itm = itm.unwrap();
+
+                let result = std::str::from_utf8(itm).unwrap();
+
+                if i == 0 {
+                    assert_eq!("19313.0", result)
+                } else if i == 1 {
+                    assert_eq!("2.7731", result)
+                } else {
+                    panic!("Invalid index");
+                }
+
+                i += 1;
+            }
+        }
     }
 }

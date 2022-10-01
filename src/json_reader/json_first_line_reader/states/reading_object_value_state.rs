@@ -10,6 +10,6 @@ impl ReadingObjectValueState {
     }
 
     pub fn read_next(&self, raw: &[u8]) -> Result<usize, JsonParseError> {
-        super::super::super::read_json_object::read_json_object(raw, self.pos)
+        super::super::super::read_json_object::find_the_end_of_json_object_or_array(raw, self.pos)
     }
 }
