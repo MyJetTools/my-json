@@ -37,7 +37,8 @@ fn parse_date_time_seconds(time_as_string: &[u8]) -> Option<DateTimeAsMicrosecon
     let sec =
         (time_as_string[17] - START_ZERO) as u32 * 10 + (time_as_string[18] - START_ZERO) as u32;
 
-    let date_time = NaiveDate::from_ymd(year, month, day).and_hms_micro(hour, min, sec, 0);
+    let date_time =
+        NaiveDate::from_ymd_opt(year, month, day)?.and_hms_micro_opt(hour, min, sec, 0)?;
 
     let timestamp = date_time.timestamp_millis();
 
@@ -69,8 +70,12 @@ fn parse_date_time_milliseconds(time_as_string: &[u8]) -> Option<DateTimeAsMicro
         + (time_as_string[21] - START_ZERO) as u32 * 10
         + (time_as_string[22] - START_ZERO) as u32;
 
-    let date_time =
-        NaiveDate::from_ymd(year, month, day).and_hms_micro(hour, min, sec, microsec * 1000);
+    let date_time = NaiveDate::from_ymd_opt(year, month, day)?.and_hms_micro_opt(
+        hour,
+        min,
+        sec,
+        microsec * 1000,
+    )?;
 
     Some(DateTimeAsMicroseconds::new(
         date_time.timestamp_nanos() / 1000,
@@ -106,7 +111,8 @@ fn parse_date_time_microseconds(time_as_string: &[u8]) -> Option<DateTimeAsMicro
         + (time_as_string[24] - START_ZERO) as u32 * 10
         + (time_as_string[25] - START_ZERO) as u32;
 
-    let date_time = NaiveDate::from_ymd(year, month, day).and_hms_micro(hour, min, sec, microsec);
+    let date_time =
+        NaiveDate::from_ymd_opt(year, month, day)?.and_hms_micro_opt(hour, min, sec, microsec)?;
 
     Some(DateTimeAsMicroseconds::new(
         date_time.timestamp_nanos() / 1000,

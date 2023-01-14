@@ -79,5 +79,5 @@ fn expected_token() -> String {
         sb.append_char(',');
     }
 
-    return sb.to_string_utf8().unwrap();
+    return sb.to_string_utf8();
 }
