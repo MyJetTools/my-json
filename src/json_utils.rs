@@ -86,7 +86,7 @@ pub fn is_bool(src: &[u8]) -> Option<bool> {
     }
 
     if is_that_value(&FALSE_LC, &FALSE_UC, src) {
-        return Some(true);
+        return Some(false);
     }
 
     None
