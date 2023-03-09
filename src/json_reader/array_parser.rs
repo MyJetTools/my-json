@@ -329,4 +329,31 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_from_real_world() {
+        let src = r#"[
+            {
+              "Id": "YourFin",
+              "BaseDomain": "yourfin.tech",
+              "DomainsPool": [
+                "yourfin.tech"
+              ],
+              "CakeRegistrationId": "9",
+              "CakeFtdId": "36",
+              "CakeDepositId": "37",
+              "CakeTradeId": "38",
+              "CakeStatusId": "35",
+              "PartitionKey": "brand",
+              "RowKey": "YourFin",
+              "TimeStamp": "2022-11-22T16:00:52.7472",
+              "Expires": null
+            }]"#;
+
+        for object in JsonArrayIterator::new(src.as_bytes()) {
+            let object = object.unwrap();
+            let object = std::str::from_utf8(object).unwrap();
+            println!("{}", object);
+        }
+    }
 }
