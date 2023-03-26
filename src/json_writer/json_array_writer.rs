@@ -1,3 +1,5 @@
+use rust_extensions::StrOrString;
+
 use crate::EscapedJsonString;
 
 use super::JsonBuilder;
@@ -18,7 +20,7 @@ impl JsonArrayWriter {
         }
     }
 
-    fn add_delimetr(&mut self) {
+    fn add_delimiter(&mut self) {
         if self.first_element {
             self.first_element = false;
         } else {
@@ -26,26 +28,26 @@ impl JsonArrayWriter {
         }
     }
 
-    pub fn write_string_element(&mut self, value: &str) {
-        self.add_delimetr();
+    pub fn write_string_element<'s>(&mut self, value: impl Into<StrOrString<'s>>) {
+        self.add_delimiter();
         self.raw.push('"' as u8);
         self.raw
-            .extend_from_slice(EscapedJsonString::new(value).as_slice());
+            .extend_from_slice(EscapedJsonString::new(value.into().as_str()).as_slice());
         self.raw.push('"' as u8);
     }
 
     pub fn write_null_element(&mut self) {
-        self.add_delimetr();
+        self.add_delimiter();
         self.raw.extend_from_slice("null".as_bytes());
     }
 
     pub fn write_number_element(&mut self, number: &str) {
-        self.add_delimetr();
+        self.add_delimiter();
         self.raw.extend_from_slice(number.as_bytes());
     }
 
     pub fn write_raw_element(&mut self, raw: &[u8]) {
-        self.add_delimetr();
+        self.add_delimiter();
         self.raw.extend_from_slice(raw);
     }
 
@@ -55,7 +57,7 @@ impl JsonArrayWriter {
     }
 
     pub fn write_object<TJsonBuilder: JsonBuilder>(&mut self, value: TJsonBuilder) {
-        self.add_delimetr();
+        self.add_delimiter();
         self.raw.extend(value.build());
     }
 

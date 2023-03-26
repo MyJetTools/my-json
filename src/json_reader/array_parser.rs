@@ -50,7 +50,7 @@ impl<'t> Iterator for JsonArrayIterator<'t> {
                 return Some(Err(err));
             }
         } else {
-            self.pos = match super::read_json_object::skip_whitespaces(self.data, self.pos + 1) {
+            self.pos = match super::read_json_object::skip_white_spaces(self.data, self.pos + 1) {
                 Ok(value) => value,
                 Err(err) => return Some(Err(err)),
             };
@@ -71,7 +71,7 @@ impl<'t> Iterator for JsonArrayIterator<'t> {
             }
         }
 
-        let start_pos = match super::read_json_object::skip_whitespaces(self.data, self.pos + 1) {
+        let start_pos = match super::read_json_object::skip_white_spaces(self.data, self.pos + 1) {
             Ok(value) => value,
             Err(err) => return Some(Err(err)),
         };
@@ -335,9 +335,9 @@ mod tests {
         let src = r#"[
             {
               "Id": "YourFin",
-              "BaseDomain": "yourfin.tech",
+              "BaseDomain": "your_fin.tech",
               "DomainsPool": [
-                "yourfin.tech"
+                "your_fin.tech"
               ],
               "CakeRegistrationId": "9",
               "CakeFtdId": "36",

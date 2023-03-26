@@ -141,7 +141,7 @@ pub fn next_token_must_be(raw: &[u8], start_pos: usize, token: u8) -> FoundResul
     return FoundResult::EndOfJson;
 }
 
-pub fn skip_whitespaces(raw: &[u8], start_pos: usize) -> Result<usize, JsonParseError> {
+pub fn skip_white_spaces(raw: &[u8], start_pos: usize) -> Result<usize, JsonParseError> {
     for pos in start_pos..raw.len() {
         let b = raw[pos];
         if b <= 32 {
@@ -152,7 +152,7 @@ pub fn skip_whitespaces(raw: &[u8], start_pos: usize) -> Result<usize, JsonParse
     }
 
     Err(JsonParseError::new(format!(
-        "Error skiping whitespaces. Start {}. We reached the end of the payload",
+        "Error skipping white spaces. Start {}. We reached the end of the payload",
         start_pos
     )))
 }

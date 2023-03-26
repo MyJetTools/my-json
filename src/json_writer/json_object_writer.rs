@@ -1,6 +1,6 @@
 use crate::EscapedJsonString;
 
-use super::JsonBuilder;
+use super::{JsonBuilder, JsonValue};
 
 pub struct JsonObjectWriter {
     first_element: bool,
@@ -21,7 +21,7 @@ impl JsonObjectWriter {
         !self.first_element
     }
 
-    fn add_delimetr(&mut self) {
+    fn add_delimiter(&mut self) {
         if self.first_element {
             self.first_element = false;
         } else {
@@ -36,100 +36,23 @@ impl JsonObjectWriter {
         self.raw.extend_from_slice("\":".as_bytes());
     }
 
-    pub fn write_empty_array(&mut self, key: &str) {
-        self.add_delimetr();
-        self.write_key(key);
-        self.raw.extend_from_slice("[]".as_bytes());
-    }
-
-    pub fn write_null_value(&mut self, key: &str) {
-        self.add_delimetr();
-        self.write_key(key);
-        self.raw.extend_from_slice("null".as_bytes());
-    }
-
-    pub fn write_string_value(&mut self, key: &str, value: &str) {
-        self.add_delimetr();
-
+    pub fn write_value(&mut self, key: &str, value: impl JsonValue) {
+        self.add_delimiter();
         self.write_key(key);
 
-        self.raw.push('"' as u8);
-        self.raw
-            .extend_from_slice(EscapedJsonString::new(value).as_slice());
-        self.raw.push('"' as u8);
-    }
-
-    pub fn write_bool_value(&mut self, key: &str, value: bool) {
-        self.add_delimetr();
-        self.write_key(key);
-
-        if value {
-            self.raw.extend_from_slice("true".as_bytes())
-        } else {
-            self.raw.extend_from_slice("false".as_bytes())
-        }
+        value.write_value(&mut self.raw);
     }
 
     pub fn write_raw_value(&mut self, key: &str, raw: &[u8]) {
-        self.add_delimetr();
+        self.add_delimiter();
 
         self.write_key(key);
 
         self.raw.extend(raw);
     }
 
-    pub fn write_f64(&mut self, key: &str, value: f64) {
-        self.add_delimetr();
-
-        self.write_key(key);
-
-        let value = format!("{}", value);
-
-        self.raw.extend_from_slice(value.as_bytes());
-    }
-
-    pub fn write_usize(&mut self, key: &str, value: usize) {
-        self.add_delimetr();
-
-        self.write_key(key);
-
-        let value = format!("{}", value);
-
-        self.raw.extend_from_slice(value.as_bytes());
-    }
-
-    pub fn write_isize(&mut self, key: &str, value: isize) {
-        self.add_delimetr();
-
-        self.write_key(key);
-
-        let value = format!("{}", value);
-
-        self.raw.extend_from_slice(value.as_bytes());
-    }
-
-    pub fn write_i64(&mut self, key: &str, value: i64) {
-        self.add_delimetr();
-
-        self.write_key(key);
-
-        let value = format!("{}", value);
-
-        self.raw.extend_from_slice(value.as_bytes());
-    }
-
-    pub fn write_u64(&mut self, key: &str, value: u64) {
-        self.add_delimetr();
-
-        self.write_key(key);
-
-        let value = format!("{}", value);
-
-        self.raw.extend_from_slice(value.as_bytes());
-    }
-
     pub fn write_object<TJsonBuilder: JsonBuilder>(&mut self, key: &str, value: TJsonBuilder) {
-        self.add_delimetr();
+        self.add_delimiter();
 
         self.write_key(key);
 

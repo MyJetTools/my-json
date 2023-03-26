@@ -31,10 +31,10 @@ impl<'s> JsonValue<'s> {
                 false => Some("false"),
             },
             JsonValue::Array(_) => {
-                panic!("Json array can no be converted to string. Does not make sence")
+                panic!("Json array can no be converted to string. Does not make sense")
             }
             JsonValue::Object(_) => {
-                panic!("Json object can no be converted to string. Does not make sence")
+                panic!("Json object can no be converted to string. Does not make sense")
             }
         }
     }
