@@ -9,16 +9,20 @@ pub struct EscapedJsonString<'s> {
 
 impl<'s> EscapedJsonString<'s> {
     pub fn new(src: &'s str) -> Self {
-        if !has_to_escape(src.as_bytes()) {
+        return Self::from_bytes(src.as_bytes());
+    }
+
+    pub fn from_bytes(src: &'s [u8]) -> Self {
+        if !has_to_escape(src) {
             return Self {
-                as_slice: Some(src),
+                as_slice: Some(std::str::from_utf8(src).unwrap()),
                 as_string: None,
             };
         }
 
         let mut as_string = String::new();
 
-        for b in src.as_bytes() {
+        for b in src {
             match *b {
                 DOUBLE_QUOTE => {
                     as_string.push_str("\\\"");

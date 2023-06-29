@@ -87,7 +87,8 @@ impl JsonValue for bool {
 impl JsonValue for String {
     fn write_value(&self, dest: &mut Vec<u8>) {
         dest.push('"' as u8);
-        dest.extend_from_slice(self.to_string().as_bytes());
+        let escaped_json = crate::EscapedJsonString::new(self);
+        dest.extend_from_slice(escaped_json.as_slice());
         dest.push('"' as u8);
     }
 }
@@ -95,7 +96,8 @@ impl JsonValue for String {
 impl<'s> JsonValue for &'s str {
     fn write_value(&self, dest: &mut Vec<u8>) {
         dest.push('"' as u8);
-        dest.extend_from_slice(self.to_string().as_bytes());
+        let escaped_json = crate::EscapedJsonString::new(self);
+        dest.extend_from_slice(escaped_json.as_slice());
         dest.push('"' as u8);
     }
 }
@@ -103,7 +105,8 @@ impl<'s> JsonValue for &'s str {
 impl<'s> JsonValue for &'s String {
     fn write_value(&self, dest: &mut Vec<u8>) {
         dest.push('"' as u8);
-        dest.extend_from_slice(self.to_string().as_bytes());
+        let escaped_json = crate::EscapedJsonString::new(self);
+        dest.extend_from_slice(escaped_json.as_slice());
         dest.push('"' as u8);
     }
 }
