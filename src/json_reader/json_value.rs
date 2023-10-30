@@ -11,7 +11,7 @@ pub enum JsonValue<'s> {
 
 impl<'s> JsonValue<'s> {
     pub fn as_date_time(&self) -> Option<DateTimeAsMicroseconds> {
-        super::date_time::parse(self.as_str()?.as_bytes())
+        DateTimeAsMicroseconds::from_str(self.as_str()?)
     }
 
     pub fn is_null(&self) -> bool {
