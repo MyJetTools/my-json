@@ -51,6 +51,11 @@ impl JsonArrayWriter {
         self.raw.extend_from_slice(raw);
     }
 
+    pub fn get_mut_to_write_raw_element(&mut self) -> &mut Vec<u8> {
+        self.add_delimiter();
+        &mut self.raw
+    }
+
     pub fn build(mut self) -> Vec<u8> {
         self.raw.push(']' as u8);
         self.raw
