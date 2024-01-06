@@ -4,5 +4,5 @@ mod reader;
 mod states;
 
 pub use json_first_line::JsonFirstLine;
-pub use read_mode::{ReadMode, ReadResult};
+pub use read_mode::*;
 pub use reader::JsonFirstLineReader;

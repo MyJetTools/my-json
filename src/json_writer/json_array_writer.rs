@@ -61,7 +61,7 @@ impl JsonArrayWriter {
         self.raw
     }
 
-    pub fn write_object<TJsonBuilder: JsonBuilder>(&mut self, value: TJsonBuilder) {
+    pub fn write_object(&mut self, value: impl JsonBuilder) {
         self.add_delimiter();
         self.raw.extend(value.build());
     }
