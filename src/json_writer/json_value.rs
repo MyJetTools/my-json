@@ -109,6 +109,20 @@ impl<'s> JsonObject for &'s String {
     }
 }
 
+pub struct RawJsonObject(Vec<u8>);
+
+impl Into<RawJsonObject> for Vec<u8> {
+    fn into(self) -> RawJsonObject {
+        RawJsonObject(self)
+    }
+}
+
+impl<'s> JsonObject for RawJsonObject {
+    fn write_into(&self, dest: &mut Vec<u8>) {
+        dest.extend_from_slice(self.0.as_slice());
+    }
+}
+
 pub struct JsonNullValue;
 
 impl JsonObject for JsonNullValue {
