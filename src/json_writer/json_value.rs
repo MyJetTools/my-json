@@ -109,23 +109,33 @@ impl<'s> JsonObject for &'s String {
     }
 }
 
-pub struct RawJsonObject(Vec<u8>);
+pub enum RawJsonObject<'s> {
+    AsVec(Vec<u8>),
+    AsSlice(&'s [u8]),
+}
 
-impl RawJsonObject {
+impl<'s> RawJsonObject<'s> {
     pub fn new(value: Vec<u8>) -> Self {
-        RawJsonObject(value)
+        RawJsonObject::AsVec(value)
+    }
+
+    pub fn as_slice(&'s self) -> &'s [u8] {
+        match self {
+            RawJsonObject::AsVec(vec) => vec.as_slice(),
+            RawJsonObject::AsSlice(slice) => slice,
+        }
     }
 }
 
-impl Into<RawJsonObject> for Vec<u8> {
-    fn into(self) -> RawJsonObject {
-        RawJsonObject(self)
+impl<'s> Into<RawJsonObject<'s>> for Vec<u8> {
+    fn into(self) -> RawJsonObject<'s> {
+        RawJsonObject::AsVec(self)
     }
 }
 
-impl<'s> JsonObject for RawJsonObject {
+impl<'s> JsonObject for RawJsonObject<'s> {
     fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.0.as_slice());
+        dest.extend_from_slice(self.as_slice());
     }
 }
 
