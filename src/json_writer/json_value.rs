@@ -111,6 +111,12 @@ impl<'s> JsonObject for &'s String {
 
 pub struct RawJsonObject(Vec<u8>);
 
+impl RawJsonObject {
+    pub fn new(value: Vec<u8>) -> Self {
+        RawJsonObject(value)
+    }
+}
+
 impl Into<RawJsonObject> for Vec<u8> {
     fn into(self) -> RawJsonObject {
         RawJsonObject(self)
