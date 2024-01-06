@@ -1,6 +1,6 @@
 use crate::EscapedJsonString;
 
-use super::{JsonBuilder, JsonValue};
+use super::JsonObject;
 
 pub struct JsonObjectWriter {
     first_element: bool,
@@ -36,27 +36,10 @@ impl JsonObjectWriter {
         self.raw.extend_from_slice("\":".as_bytes());
     }
 
-    pub fn write_value(&mut self, key: &str, value: impl JsonValue) {
+    pub fn write(&mut self, key: &str, value: impl JsonObject) {
         self.add_delimiter();
         self.write_key(key);
-
-        value.write_value(&mut self.raw);
-    }
-
-    pub fn write_raw_value(&mut self, key: &str, raw: &[u8]) {
-        self.add_delimiter();
-
-        self.write_key(key);
-
-        self.raw.extend(raw);
-    }
-
-    pub fn write_object(&mut self, key: &str, value: impl JsonBuilder) {
-        self.add_delimiter();
-
-        self.write_key(key);
-
-        self.raw.extend(value.build());
+        value.write_into(&mut self.raw);
     }
 
     pub fn build(mut self) -> Vec<u8> {
@@ -70,12 +53,8 @@ impl JsonObjectWriter {
     }
 }
 
-impl JsonBuilder for JsonObjectWriter {
-    fn build(self) -> Vec<u8> {
-        self.build()
-    }
-
-    fn build_into(&self, dest: &mut Vec<u8>) {
+impl JsonObject for JsonObjectWriter {
+    fn write_into(&self, dest: &mut Vec<u8>) {
         self.build_into(dest)
     }
 }

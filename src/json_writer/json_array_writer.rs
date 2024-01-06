@@ -1,8 +1,4 @@
-use rust_extensions::StrOrString;
-
-use crate::EscapedJsonString;
-
-use super::JsonBuilder;
+use super::JsonObject;
 
 pub struct JsonArrayWriter {
     raw: Vec<u8>,
@@ -28,32 +24,9 @@ impl JsonArrayWriter {
         }
     }
 
-    pub fn write_string_element<'s>(&mut self, value: impl Into<StrOrString<'s>>) {
-        self.add_delimiter();
-        self.raw.push('"' as u8);
-        self.raw
-            .extend_from_slice(EscapedJsonString::new(value.into().as_str()).as_slice());
-        self.raw.push('"' as u8);
-    }
-
     pub fn write_null_element(&mut self) {
         self.add_delimiter();
         self.raw.extend_from_slice("null".as_bytes());
-    }
-
-    pub fn write_number_element(&mut self, number: &str) {
-        self.add_delimiter();
-        self.raw.extend_from_slice(number.as_bytes());
-    }
-
-    pub fn write_raw_element(&mut self, raw: &[u8]) {
-        self.add_delimiter();
-        self.raw.extend_from_slice(raw);
-    }
-
-    pub fn get_mut_to_write_raw_element(&mut self) -> &mut Vec<u8> {
-        self.add_delimiter();
-        &mut self.raw
     }
 
     pub fn build(mut self) -> Vec<u8> {
@@ -61,9 +34,9 @@ impl JsonArrayWriter {
         self.raw
     }
 
-    pub fn write_object(&mut self, value: impl JsonBuilder) {
+    pub fn write(&mut self, value: impl JsonObject) {
         self.add_delimiter();
-        self.raw.extend(value.build());
+        value.write_into(&mut self.raw);
     }
 
     pub fn build_into(&self, dest: &mut Vec<u8>) {
@@ -72,12 +45,8 @@ impl JsonArrayWriter {
     }
 }
 
-impl JsonBuilder for JsonArrayWriter {
-    fn build(self) -> Vec<u8> {
-        self.build()
-    }
-
-    fn build_into(&self, dest: &mut Vec<u8>) {
+impl JsonObject for JsonArrayWriter {
+    fn write_into(&self, dest: &mut Vec<u8>) {
         self.build_into(dest)
     }
 }
