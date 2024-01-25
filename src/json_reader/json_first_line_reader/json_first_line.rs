@@ -14,12 +14,12 @@ pub struct JsonFirstLine<'t> {
 
 impl<'t> JsonFirstLine<'t> {
     #[cfg(test)]
-    pub fn get_raw_name(&self) -> Result<&'t str, Utf8Error> {
+    pub fn get_raw_name(&'t self) -> Result<&'t str, Utf8Error> {
         let name = &self.data[self.name_start..self.name_end];
         return std::str::from_utf8(name);
     }
 
-    pub fn get_name(&self) -> Result<&'t str, JsonParseError> {
+    pub fn get_name(&'t self) -> Result<&'t str, JsonParseError> {
         let name = &self.data[self.name_start + 1..self.name_end - 1];
 
         if name.len() == 0 {
@@ -40,12 +40,12 @@ impl<'t> JsonFirstLine<'t> {
     }
 
     #[cfg(test)]
-    pub fn get_raw_value(&self) -> Result<&'t str, Utf8Error> {
+    pub fn get_raw_value(&'t self) -> Result<&'t str, Utf8Error> {
         let value = &self.data[self.value_start..self.value_end];
         return std::str::from_utf8(value);
     }
 
-    pub fn get_value(&self) -> Result<JsonValue<'t>, JsonParseError> {
+    pub fn get_value(&'t self) -> Result<JsonValue<'t>, JsonParseError> {
         let value = &self.data[self.value_start..self.value_end];
 
         if crate::json_utils::is_null(value) {

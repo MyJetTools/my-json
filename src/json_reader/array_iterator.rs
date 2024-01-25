@@ -1,29 +1,28 @@
+use super::{byte_of_array_reader::FoundResult, consts, JsonParseError};
 pub use consts::*;
+use rust_extensions::array_of_bytes_iterator::*;
 
-use super::{consts, read_json_object::FoundResult, JsonParseError};
-
-pub struct JsonArrayIterator<'t> {
-    data: &'t [u8],
-    pos: usize,
+pub struct JsonArrayIterator<TArrayOfBytesIterator: ArrayOfBytesIterator> {
+    data: TArrayOfBytesIterator,
+    initialized: bool,
 }
 
-impl<'t> JsonArrayIterator<'t> {
-    pub fn new(data: &'t [u8]) -> Self {
-        let result = Self { data, pos: 0 };
-
-        result
+impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIterator<TArrayOfBytesIterator> {
+    pub fn new(mut data: TArrayOfBytesIterator) -> Self {
+        super::byte_of_array_reader::skip_white_spaces(&mut data).unwrap();
+        Self {
+            data,
+            initialized: false,
+        }
     }
 
     fn init(&mut self) -> Result<(), JsonParseError> {
-        if self.pos > 0 {
-            return Ok(());
-        }
-
-        let result = super::read_json_object::next_token_must_be(self.data, 0, consts::OPEN_ARRAY);
+        let result =
+            super::byte_of_array_reader::next_token_must_be(&mut self.data, consts::OPEN_ARRAY);
 
         match result {
-            FoundResult::Ok(pos) => {
-                self.pos = pos;
+            FoundResult::Ok(_) => {
+                self.initialized = true;
                 return Ok(());
             }
             FoundResult::EndOfJson => {
@@ -31,182 +30,144 @@ impl<'t> JsonArrayIterator<'t> {
                     "Can not find start of the array token"
                 )));
             }
-            FoundResult::InvalidTokenFound { found_token, pos } => {
+            FoundResult::InvalidTokenFound(value) => {
                 return Err(JsonParseError::new(format!(
                     "We were looking start of array token but found '{}' at position {}",
-                    found_token as char, pos
+                    value.value as char, value.pos
                 )));
             }
         }
     }
-}
 
-impl<'t> Iterator for JsonArrayIterator<'t> {
-    type Item = Result<&'t [u8], JsonParseError>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.pos == 0 {
-            if let Err(err) = self.init() {
-                return Some(Err(err));
+    pub fn get_next<'s>(&'s mut self) -> Option<Result<&'s [u8], JsonParseError>> {
+        let start_value = if !self.initialized {
+            match self.init() {
+                Ok(_) => match super::byte_of_array_reader::skip_white_spaces(&mut self.data) {
+                    Ok(value) => value,
+                    Err(err) => return Some(Err(err)),
+                },
+                Err(err) => return Some(Err(err)),
             }
         } else {
-            self.pos = match super::read_json_object::skip_white_spaces(self.data, self.pos + 1) {
+            let next_pos = match super::byte_of_array_reader::skip_white_spaces_and_extract_value(
+                &mut self.data,
+            ) {
                 Ok(value) => value,
                 Err(err) => return Some(Err(err)),
             };
 
-            let b = self.data[self.pos];
-
-            match b {
+            match next_pos.value {
                 consts::CLOSE_ARRAY => {
                     return None;
                 }
-                consts::COMMA => {}
+                consts::COMMA => {
+                    match super::byte_of_array_reader::skip_white_spaces(&mut self.data) {
+                        Ok(value) => value,
+                        Err(err) => return Some(Err(err)),
+                    }
+                }
                 _ => {
                     return Some(Err(JsonParseError::new(format!(
                         "Invalid token found ['{}'] at position {}",
-                        b as char, self.pos
+                        next_pos.value as char, next_pos.pos
                     ))));
                 }
             }
-        }
-
-        let start_pos = match super::read_json_object::skip_white_spaces(self.data, self.pos + 1) {
-            Ok(value) => value,
-            Err(err) => return Some(Err(err)),
         };
-        let b = self.data[start_pos];
 
-        let end_of_item = match b {
+        match start_value.value {
             consts::CLOSE_ARRAY => {
                 return None;
             }
             consts::DOUBLE_QUOTE => {
-                match super::read_json_object::find_the_end_of_the_string(self.data, start_pos + 1)
-                {
-                    Ok(value) => value,
+                match super::byte_of_array_reader::find_the_end_of_the_string(&mut self.data) {
+                    Ok(_) => {}
                     Err(err) => return Some(Err(err)),
                 }
             }
 
             consts::OPEN_ARRAY => {
-                match super::read_json_object::find_the_end_of_json_object_or_array(
-                    self.data, start_pos,
+                match super::byte_of_array_reader::find_the_end_of_json_object_or_array(
+                    &mut self.data,
                 ) {
-                    Ok(value) => value,
+                    Ok(_) => {}
                     Err(err) => return Some(Err(err)),
                 }
             }
 
             consts::OPEN_BRACKET => {
-                match super::read_json_object::find_the_end_of_json_object_or_array(
-                    self.data, start_pos,
+                match super::byte_of_array_reader::find_the_end_of_json_object_or_array(
+                    &mut self.data,
                 ) {
-                    Ok(value) => value,
+                    Ok(_) => {}
                     Err(err) => return Some(Err(err)),
                 }
             }
             consts::START_OF_NULL_UPPER_CASE => {
-                let end = start_pos + 3;
-                if end >= self.data.len() {
-                    return Some(Err(JsonParseError::new(format!(
-                        "Invalid token found ['{}'] at position {}",
-                        b as char, start_pos
-                    ))));
+                if let Err(err) =
+                    super::byte_of_array_reader::check_json_symbol(&mut self.data, "null")
+                {
+                    return Some(Err(err));
                 }
-
-                end
             }
 
             consts::START_OF_NULL_LOWER_CASE => {
-                let end = start_pos + 3;
-                if end >= self.data.len() {
-                    return Some(Err(JsonParseError::new(format!(
-                        "Invalid token found ['{}'] at position {}",
-                        b as char, start_pos
-                    ))));
+                if let Err(err) =
+                    super::byte_of_array_reader::check_json_symbol(&mut self.data, "null")
+                {
+                    return Some(Err(err));
                 }
-
-                end
             }
 
             consts::START_OF_TRUE_UPPER_CASE => {
-                let end = start_pos + 3;
-                if end >= self.data.len() {
-                    return Some(Err(JsonParseError::new(format!(
-                        "Invalid token found ['{}'] at position {}",
-                        b as char, start_pos
-                    ))));
+                if let Err(err) =
+                    super::byte_of_array_reader::check_json_symbol(&mut self.data, "true")
+                {
+                    return Some(Err(err));
                 }
-
-                end
             }
 
             consts::START_OF_TRUE_LOWER_CASE => {
-                let end = start_pos + 3;
-                if end >= self.data.len() {
-                    return Some(Err(JsonParseError::new(format!(
-                        "Invalid token found ['{}'] at position {}",
-                        b as char, start_pos
-                    ))));
+                if let Err(err) =
+                    super::byte_of_array_reader::check_json_symbol(&mut self.data, "true")
+                {
+                    return Some(Err(err));
                 }
-
-                end
             }
 
             consts::START_OF_FALSE_UPPER_CASE => {
-                let end = start_pos + 4;
-                if end >= self.data.len() {
-                    return Some(Err(JsonParseError::new(format!(
-                        "Invalid token found ['{}'] at position {}",
-                        b as char, start_pos
-                    ))));
+                if let Err(err) =
+                    super::byte_of_array_reader::check_json_symbol(&mut self.data, "false")
+                {
+                    return Some(Err(err));
                 }
-
-                end
             }
 
             consts::START_OF_FALSE_LOWER_CASE => {
-                let end = start_pos + 4;
-                if end >= self.data.len() {
-                    return Some(Err(JsonParseError::new(format!(
-                        "Invalid token found ['{}'] at position {}",
-                        b as char, start_pos
-                    ))));
+                if let Err(err) =
+                    super::byte_of_array_reader::check_json_symbol(&mut self.data, "false")
+                {
+                    return Some(Err(err));
                 }
-
-                end
             }
 
             _ => {
-                if super::read_json_object::is_number(b) {
-                    match super::read_json_object::find_the_end_of_the_number(self.data, start_pos)
-                    {
-                        Ok(value) => value,
+                if super::byte_of_array_reader::is_number(start_value.value) {
+                    match super::byte_of_array_reader::find_the_end_of_the_number(&mut self.data) {
+                        Ok(_) => {}
                         Err(err) => return Some(Err(err)),
                     }
                 } else {
                     return Some(Err(JsonParseError::new(format!(
                         "Invalid token found '{}' at position {}",
-                        b as char, start_pos
+                        start_value.value as char, start_value.pos
                     ))));
                 }
             }
         };
 
-        self.pos = end_of_item;
-        let result = &self.data[start_pos..end_of_item + 1];
+        let result = self.data.get_slice_to_current_pos(start_value.pos);
         return Some(Ok(result));
-    }
-}
-
-pub trait ArrayToJsonObjectsSplitter<'t> {
-    fn split_array_json_to_objects(self) -> JsonArrayIterator<'t>;
-}
-
-impl<'t> ArrayToJsonObjectsSplitter<'t> for &'t [u8] {
-    fn split_array_json_to_objects(self) -> JsonArrayIterator<'t> {
-        return JsonArrayIterator::new(self);
     }
 }
 
@@ -222,7 +183,12 @@ mod tests {
         println!("{}", json);
 
         let mut i = 0;
-        for sub_json in json.as_bytes().split_array_json_to_objects() {
+
+        let slice_iterator = SliceIterator::from_str(json);
+
+        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
+
+        while let Some(sub_json) = json_array_iterator.get_next() {
             let sub_json = sub_json.unwrap();
             i += 1;
             println!("{}", i);
@@ -242,7 +208,12 @@ mod tests {
         println!("{}", json);
 
         let mut i = 0;
-        for sub_json in json.as_bytes().split_array_json_to_objects() {
+
+        let slice_iterator = SliceIterator::from_str(json);
+
+        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
+
+        while let Some(sub_json) = json_array_iterator.get_next() {
             let sub_json = sub_json.unwrap();
             i += 1;
 
@@ -260,7 +231,11 @@ mod tests {
         println!("{}", json);
 
         let mut i = 0;
-        for sub_json in json.as_bytes().split_array_json_to_objects() {
+
+        let slice_iterator = SliceIterator::from_str(json);
+        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
+
+        while let Some(sub_json) = json_array_iterator.get_next() {
             let sub_json = sub_json.unwrap();
             i += 1;
 
@@ -270,12 +245,16 @@ mod tests {
             );
         }
     }
+
     #[test]
     pub fn parse_empty_array() {
         let json = r###"[]"###;
 
         let mut i = 0;
-        for sub_json in json.as_bytes().split_array_json_to_objects() {
+        let slice_iterator = SliceIterator::from_str(json);
+        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
+
+        while let Some(sub_json) = json_array_iterator.get_next() {
             let sub_json = sub_json.unwrap();
 
             println!("{}", sub_json.len());
@@ -291,10 +270,15 @@ mod tests {
 
         let mut result = Vec::new();
 
-        for sub_json in json.as_bytes().split_array_json_to_objects() {
+        let slice_iterator = SliceIterator::from_str(json);
+        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
+
+        while let Some(sub_json) = json_array_iterator.get_next() {
             let sub_json = sub_json.unwrap();
 
-            result.push(String::from_utf8(sub_json.to_vec()).unwrap());
+            let value = String::from_utf8(sub_json.to_vec()).unwrap();
+            println!("{:?}", value);
+            result.push(value);
         }
 
         assert_eq!("\"chat message\"", result.get(0).unwrap());
@@ -309,10 +293,17 @@ mod tests {
     pub fn parse_array_inside_array() {
         let json = "[[19313.0,2.7731]]";
 
-        for itm in JsonArrayIterator::new(json.as_bytes()) {
+        let slice_iterator = SliceIterator::from_str(json);
+        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
+
+        while let Some(itm) = json_array_iterator.get_next() {
             let itm = itm.unwrap();
             let mut i = 0;
-            for itm in JsonArrayIterator::new(itm) {
+
+            let slice_iterator = SliceIterator::new(itm);
+            let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
+
+            while let Some(itm) = json_array_iterator.get_next() {
                 let itm = itm.unwrap();
 
                 let result = std::str::from_utf8(itm).unwrap();
@@ -350,7 +341,10 @@ mod tests {
               "Expires": null
             }]"#;
 
-        for object in JsonArrayIterator::new(src.as_bytes()) {
+        let slice_iterator = SliceIterator::from_str(src);
+        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
+
+        while let Some(object) = json_array_iterator.get_next() {
             let object = object.unwrap();
             let object = std::str::from_utf8(object).unwrap();
             println!("{}", object);

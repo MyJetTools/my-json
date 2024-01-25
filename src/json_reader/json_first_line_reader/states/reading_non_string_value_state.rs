@@ -1,39 +1,38 @@
+use rust_extensions::array_of_bytes_iterator::*;
+
 use super::super::super::consts;
 use super::super::super::JsonParseError;
 
-pub struct ReadingNonStringValueState {
-    pub pos: usize,
-}
+pub struct ReadingNonStringValueState;
 
 impl ReadingNonStringValueState {
-    pub fn new(pos: usize) -> Self {
-        Self { pos }
-    }
-
-    pub fn read_next(&self, raw: &[u8]) -> Result<usize, JsonParseError> {
-        let mut pos = self.pos + 1;
-
-        while pos < raw.len() {
-            let b = raw[pos];
-
-            if is_non_string_value_char(b) {
-                pos += 1;
+    pub fn read_next(
+        &self,
+        src: &mut impl ArrayOfBytesIterator,
+    ) -> Result<NextValue, JsonParseError> {
+        let start_pos = src.get_pos();
+        while let Some(next_value) = src.peek_value() {
+            if is_non_string_value_char(next_value.value) {
+                src.get_next();
                 continue;
             }
 
-            if b == consts::COMMA || super::utils::is_space(b) || b == consts::CLOSE_BRACKET {
-                return Ok(pos - 1);
+            if next_value.value == consts::COMMA
+                || super::utils::is_space(next_value.value)
+                || next_value.value == consts::CLOSE_BRACKET
+            {
+                return Ok(next_value);
             }
 
             return Err(JsonParseError::new(format!(
                 "Error reading non string value. Start {}, current pos {}",
-                self.pos, pos
+                start_pos, next_value.pos
             )));
         }
 
         return Err(JsonParseError::new(format!(
             "Error reading non string value. Start {}. We reached the end of the payload",
-            self.pos
+            start_pos
         )));
     }
 }

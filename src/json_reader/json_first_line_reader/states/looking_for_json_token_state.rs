@@ -1,29 +1,31 @@
-use super::super::super::read_json_object::FoundResult;
+use rust_extensions::array_of_bytes_iterator::*;
+
+use super::super::super::byte_of_array_reader::FoundResult;
 use super::super::super::JsonParseError;
 pub struct LookingForJsonTokenState {
-    pub pos: usize,
     pub token: u8,
 }
 
 impl LookingForJsonTokenState {
-    pub fn new(pos: usize, token: u8) -> Self {
-        Self { pos, token }
+    pub fn new(token: u8) -> Self {
+        Self { token }
     }
-    pub fn read_next(&self, raw: &[u8]) -> Result<usize, JsonParseError> {
-        let result =
-            super::super::super::read_json_object::next_token_must_be(raw, self.pos, self.token);
+    pub fn read_next(
+        &self,
+        src: &mut impl ArrayOfBytesIterator,
+    ) -> Result<NextValue, JsonParseError> {
+        let start_pos = src.get_pos();
+        let result = super::super::super::byte_of_array_reader::next_token_must_be(src, self.token);
         match result {
             FoundResult::Ok(pos) => Ok(pos),
             FoundResult::EndOfJson => Err(JsonParseError::new(format!(
                 "We started looking for a token {} at pos {} and did not found",
-                self.token, self.pos
+                self.token, start_pos
             ))),
-            FoundResult::InvalidTokenFound { found_token, pos } => {
-                Err(JsonParseError::new(format!(
+            FoundResult::InvalidTokenFound(next_value) => Err(JsonParseError::new(format!(
                 "We started looking for a token {} at pos {} but we found a token '{}' at pos {}",
-                self.token as char, self.pos, found_token as char, pos
-            )))
-            }
+                self.token as char, start_pos, next_value.value as char, next_value.pos
+            ))),
         }
     }
 }

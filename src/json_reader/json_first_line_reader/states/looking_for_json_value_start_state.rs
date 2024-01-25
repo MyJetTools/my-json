@@ -1,32 +1,30 @@
 use rust_extensions::StringBuilder;
 
+use rust_extensions::array_of_bytes_iterator::*;
+
 use super::super::super::consts;
 use super::super::super::JsonParseError;
 
-pub struct LookingForJsonValueStartState {
-    pub pos: usize,
-}
+pub struct LookingForJsonValueStartState;
 
 impl LookingForJsonValueStartState {
-    pub fn new(pos: usize) -> Self {
-        Self { pos }
-    }
-    pub fn read_next(&self, raw: &[u8]) -> Result<usize, JsonParseError> {
-        let mut pos = self.pos;
-        while pos < raw.len() {
-            let b = raw[pos];
-            if super::utils::is_space(b) {
-                pos += 1;
+    pub fn read_next(
+        &self,
+        src: &mut impl ArrayOfBytesIterator,
+    ) -> Result<NextValue, JsonParseError> {
+        let start_pos = src.get_pos();
+        while let Some(next_value) = src.get_next() {
+            if super::utils::is_space(next_value.value) {
                 continue;
             }
 
-            if is_open_value(b) {
-                return Ok(pos);
+            if is_open_value(next_value.value) {
+                return Ok(next_value);
             } else {
                 return Err(JsonParseError::new(format!(
                     "Invalid token '{}' is found at position {}. Expected token is {}",
-                    b as char,
-                    pos,
+                    next_value.value as char,
+                    start_pos,
                     expected_token()
                 )));
             }
@@ -35,7 +33,7 @@ impl LookingForJsonValueStartState {
         return Err(JsonParseError::new(format!(
             "Could not find json token {} starting from position {}",
             expected_token(),
-            self.pos
+            start_pos
         )));
     }
 }
