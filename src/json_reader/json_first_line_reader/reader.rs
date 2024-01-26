@@ -1,96 +1,99 @@
+use crate::json_reader::{bytes_of_array_reader::*, consts};
 use rust_extensions::array_of_bytes_iterator::*;
 
-use super::super::json_first_line_reader::states::{
-    LookingForNextKeyStartState, ReadingNonStringValueState,
-};
-use super::{
-    super::consts,
-    states::{LookingForJsonValueStartState, ReadingObjectValueState},
-    JsonFirstLine,
-};
+use self::sync_reader::find_the_end_of_the_string;
+
+use super::JsonFirstLine;
 
 use super::super::JsonParseError;
-use super::{
-    read_mode::ReadMode,
-    states::{LookingForJsonTokenState, ReadingStringState},
-};
 
 pub struct JsonFirstLineReader<TArrayOfBytesIterator: ArrayOfBytesIterator> {
     raw: TArrayOfBytesIterator,
-    read_mode: ReadMode,
-    start_pos: usize,
+    had_init: bool,
 }
 
 impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBytesIterator> {
     pub fn new(raw: TArrayOfBytesIterator) -> Self {
-        let start_pos = raw.get_pos();
         Self {
             raw,
-            read_mode: ReadMode::LookingForOpenJson(LookingForJsonTokenState::new(
-                consts::OPEN_BRACKET,
-            )),
-            start_pos,
+            had_init: false,
         }
     }
 
-    pub fn get_next<'s>(&'s mut self) -> Option<Result<JsonFirstLine<'s>, JsonParseError>> {
-        let mut key_start = None;
-        let mut key_end = None;
-        let mut value_start = None;
-        loop {
-            let result = self.read_mode.read_next(&mut self.raw);
+    fn init_if_requires(&mut self) -> Result<bool, JsonParseError> {
+        if self.had_init {
+            let token = sync_reader::skip_white_spaces_and_get_expected_token(
+                &mut self.raw,
+                ExpectedTokenJsonObjectSeparatorOrCloseBracket,
+            )?;
 
-            if let Err(err) = result {
-                return Some(Err(err));
+            if token.value == consts::CLOSE_BRACKET {
+                return Ok(true);
             }
+        } else {
+            sync_reader::skip_white_spaces_and_get_expected_token(
+                &mut self.raw,
+                ExpectedOpenJsonObjectToken,
+            )?;
+            self.had_init = true;
+        }
 
-            match result.unwrap() {
-                super::ReadResult::OpenJsonFound => {
-                    self.read_mode = ReadMode::LookingForJsonKeyStart(
-                        LookingForJsonTokenState::new(consts::DOUBLE_QUOTE),
-                    );
-                }
-                super::ReadResult::KeyStartFound(pos) => {
-                    key_start = Some(pos);
-                    self.read_mode = ReadMode::ReadingKey(ReadingStringState);
-                }
-                super::ReadResult::KeyEndFound(pos) => {
-                    key_end = Some(pos);
-                    self.read_mode = ReadMode::LookingForKeyValueSeparator(
-                        LookingForJsonTokenState::new(consts::DOUBLE_COLUMN),
-                    );
-                }
-                super::ReadResult::KeyValueSeparatorFound => {
-                    self.read_mode = ReadMode::LookingForValueStart(LookingForJsonValueStartState);
-                }
-                super::ReadResult::FoundStringValueStart(pos) => {
-                    value_start = Some(pos);
-                    self.read_mode = ReadMode::ReadingStringValue(ReadingStringState);
-                }
-                super::ReadResult::FoundNonStringValueStart(pos) => {
-                    value_start = Some(pos);
-                    self.read_mode = ReadMode::ReadingNonStringValue(ReadingNonStringValueState);
-                }
-                super::ReadResult::FoundObjectOrArrayValueStart(pos) => {
-                    value_start = Some(pos);
-                    self.read_mode = ReadMode::ReadingObjectValue(ReadingObjectValueState);
-                }
-                super::ReadResult::ValueEndFound(pos) => {
-                    self.read_mode = ReadMode::LookingForNextKeyStart(LookingForNextKeyStartState);
+        Ok(false)
+    }
 
-                    return Some(Ok(JsonFirstLine {
-                        data: self.raw.get_slice_to_current_pos(self.start_pos),
-                        name_start: key_start.unwrap(),
-                        name_end: key_end.unwrap() + 1,
-                        value_start: value_start.unwrap(),
-                        value_end: pos + 1,
-                    }));
-                }
-                super::ReadResult::EndOfJson => {
+    pub fn get_next<'s>(&'s mut self) -> Option<Result<JsonFirstLine<'s>, JsonParseError>> {
+        match self.init_if_requires() {
+            Ok(end_of_object) => {
+                if end_of_object {
                     return None;
                 }
             }
+
+            Err(err) => return Some(Err(err)),
         }
+
+        let key_start = match sync_reader::skip_white_spaces_and_peek_expected_token(
+            &mut self.raw,
+            ExpectedJsonObjectKeyStart,
+        ) {
+            Ok(next_value) => next_value.pos,
+            Err(err) => return Some(Err(err)),
+        };
+
+        let key_end = match find_the_end_of_the_string(&mut self.raw) {
+            Ok(next_value) => next_value.pos,
+            Err(err) => return Some(Err(err)),
+        };
+
+        match sync_reader::skip_white_spaces_and_get_expected_token(
+            &mut self.raw,
+            ExpectedJsonObjectKeyValueSeparator,
+        ) {
+            Ok(next_value) => next_value,
+            Err(err) => return Some(Err(err)),
+        };
+
+        let value_start = match sync_reader::skip_white_spaces_and_peek_expected_token(
+            &mut self.raw,
+            ExpectedJsonValueStart,
+        ) {
+            Ok(next_value) => next_value,
+            Err(err) => return Some(Err(err)),
+        };
+
+        let value_end =
+            match sync_reader::find_the_end_of_the_object_value(&mut self.raw, value_start.value) {
+                Ok(pos) => pos,
+                Err(err) => return Some(Err(err)),
+            };
+
+        return Some(Ok(JsonFirstLine {
+            data: self.raw.get_slice_to_current_pos(key_start),
+            name_start: 0,
+            name_end: key_end - key_start + 1,
+            value_start: value_start.pos - key_start,
+            value_end: value_end - key_start,
+        }));
     }
 }
 
@@ -102,7 +105,7 @@ mod tests {
 
     #[test]
     pub fn test_simple_parse() {
-        let src_data = "{\"name1\":\"123\", \"name2\":true,       \"name3\":null, \"name4\":0.12}";
+        let src_data = "{\"name1\":\"123\", \"name2\":true,       \"name3\":null, \"name4\":0.12, \"name5\":{\"a\":\"b\"}}";
 
         let slice_iterator = SliceIterator::from_str(src_data);
         let mut parser = JsonFirstLineReader::new(slice_iterator);
@@ -126,6 +129,11 @@ mod tests {
 
         assert_eq!("\"name4\"", item.get_raw_name().unwrap());
         assert_eq!("0.12", item.get_raw_value().unwrap());
+
+        let item = parser.get_next().unwrap().unwrap();
+
+        assert_eq!("\"name5\"", item.get_raw_name().unwrap());
+        assert_eq!("{\"a\":\"b\"}", item.get_raw_value().unwrap());
 
         let item = parser.get_next();
 
@@ -159,5 +167,57 @@ mod tests {
 
         let value = item.get_value().unwrap();
         assert!(value.is_null());
+    }
+
+    #[test]
+    pub fn test_with_array_inside_json_l_split() {
+        let json = r###"{"names":[{"company_name": "Company \"A\""},
+                {
+                    "company_name": "Company \"B\""
+                },
+                {
+                    "company_name": "Company \"C\""
+                }
+            ],
+            "registered_address": "Addr",
+            "retrieved_at": "2010-02-23"
+        }"###;
+
+        let slice_iterator = SliceIterator::from_str(json);
+
+        let mut json_array_iterator = JsonFirstLineReader::new(slice_iterator);
+
+        while let Some(sub_json) = json_array_iterator.get_next() {
+            let sub_json = sub_json.unwrap();
+            println!("{}", sub_json.get_name().unwrap(),);
+        }
+    }
+
+    #[test]
+    pub fn read_first_line_with_empty_value() {
+        let json = r###"{
+            "": true,
+            "AD": false,
+            "CD": false,
+            "DK": false,
+            "HD": false,
+            "Note:": true,
+            "SI": false,
+            "UT": false,
+            "VÃ": false
+        }"###;
+
+        let slice_iterator = SliceIterator::from_str(json);
+
+        let mut json_array_iterator = JsonFirstLineReader::new(slice_iterator);
+
+        while let Some(sub_json) = json_array_iterator.get_next() {
+            let sub_json = sub_json.unwrap();
+            println!(
+                "{}:{}",
+                sub_json.get_raw_name().unwrap(),
+                sub_json.get_raw_value().unwrap()
+            );
+        }
     }
 }

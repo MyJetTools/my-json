@@ -9,7 +9,36 @@ pub fn is_null(src: &[u8]) -> bool {
     return false;
 }
 
-pub fn is_number(src: &[u8]) -> bool {
+pub enum NumberType {
+    NaN,
+    Number,
+    Double,
+}
+
+impl NumberType {
+    pub fn is_nan(&self) -> bool {
+        match self {
+            NumberType::NaN => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_number(&self) -> bool {
+        match self {
+            NumberType::Number => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_double(&self) -> bool {
+        match self {
+            NumberType::Double => true,
+            _ => false,
+        }
+    }
+}
+
+pub fn is_number(src: &[u8]) -> NumberType {
     let mut dots = 0;
 
     let mut es = 0;
@@ -19,7 +48,7 @@ pub fn is_number(src: &[u8]) -> bool {
             dots += 1;
 
             if dots > 1 {
-                return false;
+                return NumberType::NaN;
             }
             continue;
         }
@@ -28,7 +57,7 @@ pub fn is_number(src: &[u8]) -> bool {
             es += 1;
 
             if es > 1 {
-                return false;
+                return NumberType::NaN;
             }
 
             continue;
@@ -38,22 +67,26 @@ pub fn is_number(src: &[u8]) -> bool {
             if i == 0 {
                 continue;
             }
-            return false;
+            return NumberType::NaN;
         }
 
         if src[i] == b'+' {
             if i == 0 {
                 continue;
             }
-            return false;
+            return NumberType::NaN;
         }
 
         if !(src[i] >= '0' as u8 && src[i] <= '9' as u8) {
-            return false;
+            return NumberType::NaN;
         }
     }
 
-    return true;
+    if dots == 0 {
+        return NumberType::Number;
+    }
+
+    NumberType::Double
 }
 
 pub fn is_that_value(src_lc: &[u8], src_uc: &[u8], dest: &[u8]) -> bool {
@@ -107,14 +140,14 @@ mod test {
 
     #[test]
     fn test_is_number() {
-        assert!(is_number("15.5".as_bytes()));
+        assert!(is_number("15.5".as_bytes()).is_double());
 
-        assert!(is_number("15".as_bytes()));
+        assert!(is_number("15".as_bytes()).is_number());
 
-        assert!(is_number("+15.5".as_bytes()));
+        assert!(is_number("+15.5".as_bytes()).is_double());
 
-        assert!(is_number("-15.5".as_bytes()));
+        assert!(is_number("-15.5".as_bytes()).is_double());
 
-        assert!(!is_number("10.0.0.3:5125".as_bytes()));
+        assert!(is_number("10.0.0.3:5125".as_bytes()).is_nan());
     }
 }

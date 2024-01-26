@@ -1,4 +1,5 @@
-use super::{byte_of_array_reader::FoundResult, consts, JsonParseError};
+use super::bytes_of_array_reader::*;
+use super::{consts, JsonParseError};
 pub use consts::*;
 use rust_extensions::array_of_bytes_iterator::*;
 
@@ -11,9 +12,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIteratorAsync>
     JsonArrayIteratorAsync<TArrayOfBytesIterator>
 {
     pub async fn new(mut data: TArrayOfBytesIterator) -> Self {
-        super::byte_of_array_reader_async::skip_white_spaces(&mut data)
-            .await
-            .unwrap();
+        async_reader::skip_white_spaces(&mut data).await.unwrap();
         Self {
             data,
             initialized: false,
@@ -21,11 +20,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIteratorAsync>
     }
 
     async fn init(&mut self) -> Result<(), JsonParseError> {
-        let result = super::byte_of_array_reader_async::next_token_must_be(
-            &mut self.data,
-            consts::OPEN_ARRAY,
-        )
-        .await;
+        let result = async_reader::next_token_must_be(&mut self.data, consts::OPEN_ARRAY).await;
 
         match result {
             FoundResult::Ok(_) => {
@@ -49,36 +44,27 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIteratorAsync>
     pub async fn get_next(&mut self) -> Option<Result<Vec<u8>, JsonParseError>> {
         let start_value = if !self.initialized {
             match self.init().await {
-                Ok(_) => match super::byte_of_array_reader_async::skip_white_spaces(&mut self.data)
-                    .await
-                {
+                Ok(_) => match async_reader::skip_white_spaces(&mut self.data).await {
                     Ok(value) => value,
                     Err(err) => return Some(Err(err)),
                 },
                 Err(err) => return Some(Err(err)),
             }
         } else {
-            let next_pos =
-                match super::byte_of_array_reader_async::skip_white_spaces_and_extract_value(
-                    &mut self.data,
-                )
-                .await
-                {
-                    Ok(value) => value,
-                    Err(err) => return Some(Err(err)),
-                };
+            let next_pos = match async_reader::skip_white_spaces_and_get_next(&mut self.data).await
+            {
+                Ok(value) => value,
+                Err(err) => return Some(Err(err)),
+            };
 
             match next_pos.value {
                 consts::CLOSE_ARRAY => {
                     return None;
                 }
-                consts::COMMA => {
-                    match super::byte_of_array_reader_async::skip_white_spaces(&mut self.data).await
-                    {
-                        Ok(value) => value,
-                        Err(err) => return Some(Err(err)),
-                    }
-                }
+                consts::COMMA => match async_reader::skip_white_spaces(&mut self.data).await {
+                    Ok(value) => value,
+                    Err(err) => return Some(Err(err)),
+                },
                 _ => {
                     return Some(Err(JsonParseError::new(format!(
                         "Invalid token found ['{}'] at position {}",
@@ -93,96 +79,62 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIteratorAsync>
                 return None;
             }
             consts::DOUBLE_QUOTE => {
-                match super::byte_of_array_reader_async::find_the_end_of_the_string(&mut self.data)
-                    .await
-                {
+                match async_reader::find_the_end_of_the_string(&mut self.data).await {
                     Ok(_) => {}
                     Err(err) => return Some(Err(err)),
                 }
             }
 
-            consts::OPEN_ARRAY => {
-                match super::byte_of_array_reader_async::find_the_end_of_json_object_or_array(
-                    &mut self.data,
-                )
-                .await
-                {
-                    Ok(_) => {}
-                    Err(err) => return Some(Err(err)),
-                }
-            }
+            consts::OPEN_ARRAY => match async_reader::find_the_end_of_array(&mut self.data).await {
+                Ok(_) => {}
+                Err(err) => return Some(Err(err)),
+            },
 
             consts::OPEN_BRACKET => {
-                match super::byte_of_array_reader_async::find_the_end_of_json_object_or_array(
-                    &mut self.data,
-                )
-                .await
-                {
+                match async_reader::find_the_end_of_json(&mut self.data).await {
                     Ok(_) => {}
                     Err(err) => return Some(Err(err)),
                 }
             }
             consts::START_OF_NULL_UPPER_CASE => {
-                if let Err(err) =
-                    super::byte_of_array_reader_async::check_json_symbol(&mut self.data, "null")
-                        .await
-                {
+                if let Err(err) = async_reader::check_json_symbol(&mut self.data, "null").await {
                     return Some(Err(err));
                 }
             }
 
             consts::START_OF_NULL_LOWER_CASE => {
-                if let Err(err) =
-                    super::byte_of_array_reader_async::check_json_symbol(&mut self.data, "null")
-                        .await
-                {
+                if let Err(err) = async_reader::check_json_symbol(&mut self.data, "null").await {
                     return Some(Err(err));
                 }
             }
 
             consts::START_OF_TRUE_UPPER_CASE => {
-                if let Err(err) =
-                    super::byte_of_array_reader_async::check_json_symbol(&mut self.data, "true")
-                        .await
-                {
+                if let Err(err) = async_reader::check_json_symbol(&mut self.data, "true").await {
                     return Some(Err(err));
                 }
             }
 
             consts::START_OF_TRUE_LOWER_CASE => {
-                if let Err(err) =
-                    super::byte_of_array_reader_async::check_json_symbol(&mut self.data, "true")
-                        .await
-                {
+                if let Err(err) = async_reader::check_json_symbol(&mut self.data, "true").await {
                     return Some(Err(err));
                 }
             }
 
             consts::START_OF_FALSE_UPPER_CASE => {
-                if let Err(err) =
-                    super::byte_of_array_reader_async::check_json_symbol(&mut self.data, "false")
-                        .await
-                {
+                if let Err(err) = async_reader::check_json_symbol(&mut self.data, "false").await {
                     return Some(Err(err));
                 }
             }
 
             consts::START_OF_FALSE_LOWER_CASE => {
-                if let Err(err) =
-                    super::byte_of_array_reader_async::check_json_symbol(&mut self.data, "false")
-                        .await
-                {
+                if let Err(err) = async_reader::check_json_symbol(&mut self.data, "false").await {
                     return Some(Err(err));
                 }
             }
 
             _ => {
-                if super::byte_of_array_reader_async::is_number(start_value.value) {
-                    match super::byte_of_array_reader_async::find_the_end_of_the_number(
-                        &mut self.data,
-                    )
-                    .await
-                    {
+                if async_reader::is_number(start_value.value) {
+                    match async_reader::find_the_end_of_the_number(&mut self.data).await {
                         Ok(_) => {}
                         Err(err) => return Some(Err(err)),
                     }

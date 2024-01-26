@@ -1,4 +1,5 @@
-use super::{byte_of_array_reader::FoundResult, consts, JsonParseError};
+use super::{bytes_of_array_reader::*, JsonValue};
+use super::{consts, JsonParseError};
 pub use consts::*;
 use rust_extensions::array_of_bytes_iterator::*;
 
@@ -9,7 +10,7 @@ pub struct JsonArrayIterator<TArrayOfBytesIterator: ArrayOfBytesIterator> {
 
 impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIterator<TArrayOfBytesIterator> {
     pub fn new(mut data: TArrayOfBytesIterator) -> Self {
-        super::byte_of_array_reader::skip_white_spaces(&mut data).unwrap();
+        sync_reader::skip_white_spaces(&mut data).unwrap();
         Self {
             data,
             initialized: false,
@@ -17,8 +18,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIterator<TArrayOfByte
     }
 
     fn init(&mut self) -> Result<(), JsonParseError> {
-        let result =
-            super::byte_of_array_reader::next_token_must_be(&mut self.data, consts::OPEN_ARRAY);
+        let result = sync_reader::next_token_must_be(&mut self.data, consts::OPEN_ARRAY);
 
         match result {
             FoundResult::Ok(_) => {
@@ -39,19 +39,17 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIterator<TArrayOfByte
         }
     }
 
-    pub fn get_next<'s>(&'s mut self) -> Option<Result<&'s [u8], JsonParseError>> {
+    pub fn get_next<'s>(&'s mut self) -> Option<Result<JsonValue<'s>, JsonParseError>> {
         let start_value = if !self.initialized {
             match self.init() {
-                Ok(_) => match super::byte_of_array_reader::skip_white_spaces(&mut self.data) {
+                Ok(_) => match sync_reader::skip_white_spaces(&mut self.data) {
                     Ok(value) => value,
                     Err(err) => return Some(Err(err)),
                 },
                 Err(err) => return Some(Err(err)),
             }
         } else {
-            let next_pos = match super::byte_of_array_reader::skip_white_spaces_and_extract_value(
-                &mut self.data,
-            ) {
+            let next_pos = match sync_reader::skip_white_spaces_and_get_next(&mut self.data) {
                 Ok(value) => value,
                 Err(err) => return Some(Err(err)),
             };
@@ -60,12 +58,10 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIterator<TArrayOfByte
                 consts::CLOSE_ARRAY => {
                     return None;
                 }
-                consts::COMMA => {
-                    match super::byte_of_array_reader::skip_white_spaces(&mut self.data) {
-                        Ok(value) => value,
-                        Err(err) => return Some(Err(err)),
-                    }
-                }
+                consts::COMMA => match sync_reader::skip_white_spaces(&mut self.data) {
+                    Ok(value) => value,
+                    Err(err) => return Some(Err(err)),
+                },
                 _ => {
                     return Some(Err(JsonParseError::new(format!(
                         "Invalid token found ['{}'] at position {}",
@@ -79,81 +75,59 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIterator<TArrayOfByte
             consts::CLOSE_ARRAY => {
                 return None;
             }
-            consts::DOUBLE_QUOTE => {
-                match super::byte_of_array_reader::find_the_end_of_the_string(&mut self.data) {
-                    Ok(_) => {}
-                    Err(err) => return Some(Err(err)),
-                }
-            }
+            consts::DOUBLE_QUOTE => match sync_reader::find_the_end_of_the_string(&mut self.data) {
+                Ok(_) => {}
+                Err(err) => return Some(Err(err)),
+            },
 
-            consts::OPEN_ARRAY => {
-                match super::byte_of_array_reader::find_the_end_of_json_object_or_array(
-                    &mut self.data,
-                ) {
-                    Ok(_) => {}
-                    Err(err) => return Some(Err(err)),
-                }
-            }
+            consts::OPEN_ARRAY => match sync_reader::find_the_end_of_array(&mut self.data) {
+                Ok(_) => {}
+                Err(err) => return Some(Err(err)),
+            },
 
-            consts::OPEN_BRACKET => {
-                match super::byte_of_array_reader::find_the_end_of_json_object_or_array(
-                    &mut self.data,
-                ) {
-                    Ok(_) => {}
-                    Err(err) => return Some(Err(err)),
-                }
-            }
+            consts::OPEN_BRACKET => match sync_reader::find_the_end_of_json(&mut self.data) {
+                Ok(_) => {}
+                Err(err) => return Some(Err(err)),
+            },
             consts::START_OF_NULL_UPPER_CASE => {
-                if let Err(err) =
-                    super::byte_of_array_reader::check_json_symbol(&mut self.data, "null")
-                {
+                if let Err(err) = sync_reader::check_json_symbol(&mut self.data, "null") {
                     return Some(Err(err));
                 }
             }
 
             consts::START_OF_NULL_LOWER_CASE => {
-                if let Err(err) =
-                    super::byte_of_array_reader::check_json_symbol(&mut self.data, "null")
-                {
+                if let Err(err) = sync_reader::check_json_symbol(&mut self.data, "null") {
                     return Some(Err(err));
                 }
             }
 
             consts::START_OF_TRUE_UPPER_CASE => {
-                if let Err(err) =
-                    super::byte_of_array_reader::check_json_symbol(&mut self.data, "true")
-                {
+                if let Err(err) = sync_reader::check_json_symbol(&mut self.data, "true") {
                     return Some(Err(err));
                 }
             }
 
             consts::START_OF_TRUE_LOWER_CASE => {
-                if let Err(err) =
-                    super::byte_of_array_reader::check_json_symbol(&mut self.data, "true")
-                {
+                if let Err(err) = sync_reader::check_json_symbol(&mut self.data, "true") {
                     return Some(Err(err));
                 }
             }
 
             consts::START_OF_FALSE_UPPER_CASE => {
-                if let Err(err) =
-                    super::byte_of_array_reader::check_json_symbol(&mut self.data, "false")
-                {
+                if let Err(err) = sync_reader::check_json_symbol(&mut self.data, "false") {
                     return Some(Err(err));
                 }
             }
 
             consts::START_OF_FALSE_LOWER_CASE => {
-                if let Err(err) =
-                    super::byte_of_array_reader::check_json_symbol(&mut self.data, "false")
-                {
+                if let Err(err) = sync_reader::check_json_symbol(&mut self.data, "false") {
                     return Some(Err(err));
                 }
             }
 
             _ => {
-                if super::byte_of_array_reader::is_number(start_value.value) {
-                    match super::byte_of_array_reader::find_the_end_of_the_number(&mut self.data) {
+                if sync_reader::is_number(start_value.value) {
+                    match sync_reader::find_the_end_of_the_number(&mut self.data) {
                         Ok(_) => {}
                         Err(err) => return Some(Err(err)),
                     }
@@ -167,7 +141,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIterator<TArrayOfByte
         };
 
         let result = self.data.get_slice_to_current_pos(start_value.pos);
-        return Some(Ok(result));
+        return Some(JsonValue::new(result));
     }
 }
 
@@ -192,12 +166,13 @@ mod tests {
             let sub_json = sub_json.unwrap();
             i += 1;
             println!("{}", i);
-            println!("{}", std::str::from_utf8(sub_json).unwrap());
 
             assert_eq!(
                 format!("{{\"id\":{}}}", i),
-                std::str::from_utf8(sub_json).unwrap()
+                std::str::from_utf8(sub_json.as_bytes().unwrap()).unwrap()
             );
+
+            assert!(sub_json.is_object());
         }
     }
 
@@ -219,8 +194,10 @@ mod tests {
 
             assert_eq!(
                 format!("{{\"id\":{}}}", i),
-                std::str::from_utf8(sub_json).unwrap()
+                std::str::from_utf8(sub_json.as_bytes().unwrap()).unwrap()
             );
+
+            assert!(sub_json.is_object());
         }
     }
 
@@ -241,7 +218,7 @@ mod tests {
 
             assert_eq!(
                 format!("{{\"id\":{}}}", i),
-                std::str::from_utf8(sub_json).unwrap()
+                std::str::from_utf8(sub_json.as_bytes().unwrap()).unwrap()
             );
         }
     }
@@ -254,10 +231,7 @@ mod tests {
         let slice_iterator = SliceIterator::from_str(json);
         let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
 
-        while let Some(sub_json) = json_array_iterator.get_next() {
-            let sub_json = sub_json.unwrap();
-
-            println!("{}", sub_json.len());
+        while let Some(_) = json_array_iterator.get_next() {
             i += 1;
         }
 
@@ -268,25 +242,33 @@ mod tests {
     pub fn parse_array_with_different_objects() {
         let json = r###"["chat message",123,{"name":"chat"}, true, null]"###;
 
-        let mut result = Vec::new();
-
         let slice_iterator = SliceIterator::from_str(json);
         let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
 
-        while let Some(sub_json) = json_array_iterator.get_next() {
-            let sub_json = sub_json.unwrap();
+        let value = json_array_iterator.get_next().unwrap().unwrap();
+        assert_eq!(
+            "\"chat message\"",
+            std::str::from_utf8(value.as_bytes().unwrap()).unwrap()
+        );
+        assert_eq!("chat message", value.as_str().unwrap());
+        assert!(value.is_string());
 
-            let value = String::from_utf8(sub_json.to_vec()).unwrap();
-            println!("{:?}", value);
-            result.push(value);
-        }
+        let value = json_array_iterator.get_next().unwrap().unwrap();
+        assert_eq!(123, value.unwrap_as_number().unwrap());
 
-        assert_eq!("\"chat message\"", result.get(0).unwrap());
-        assert_eq!("123", result.get(1).unwrap());
+        let value = json_array_iterator.get_next().unwrap().unwrap();
+        assert!(value.is_object());
+        assert_eq!("{\"name\":\"chat\"}", value.as_raw_str().unwrap());
 
-        assert_eq!("{\"name\":\"chat\"}", result.get(2).unwrap());
-        assert_eq!("true", result.get(3).unwrap());
-        assert_eq!("null", result.get(4).unwrap());
+        let value = json_array_iterator.get_next().unwrap().unwrap();
+        assert!(value.is_bool());
+        assert_eq!(true, value.unwrap_as_bool().unwrap());
+
+        let value = json_array_iterator.get_next().unwrap().unwrap();
+        assert!(value.is_null());
+
+        let value = json_array_iterator.get_next();
+        assert!(value.is_none());
     }
 
     #[test]
@@ -296,29 +278,15 @@ mod tests {
         let slice_iterator = SliceIterator::from_str(json);
         let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
 
-        while let Some(itm) = json_array_iterator.get_next() {
-            let itm = itm.unwrap();
-            let mut i = 0;
+        let next_value = json_array_iterator.get_next().unwrap().unwrap();
 
-            let slice_iterator = SliceIterator::new(itm);
-            let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
+        let mut sub_array = next_value.unwrap_as_array().unwrap();
 
-            while let Some(itm) = json_array_iterator.get_next() {
-                let itm = itm.unwrap();
+        let value = sub_array.get_next().unwrap().unwrap();
+        assert_eq!(19313.0, value.unwrap_as_double().unwrap());
 
-                let result = std::str::from_utf8(itm).unwrap();
-
-                if i == 0 {
-                    assert_eq!("19313.0", result)
-                } else if i == 1 {
-                    assert_eq!("2.7731", result)
-                } else {
-                    panic!("Invalid index");
-                }
-
-                i += 1;
-            }
-        }
+        let value = sub_array.get_next().unwrap().unwrap();
+        assert_eq!(2.7731, value.unwrap_as_double().unwrap());
     }
 
     #[test]
@@ -331,12 +299,6 @@ mod tests {
                 "your_fin.tech"
               ],
               "CakeRegistrationId": "9",
-              "CakeFtdId": "36",
-              "CakeDepositId": "37",
-              "CakeTradeId": "38",
-              "CakeStatusId": "35",
-              "PartitionKey": "brand",
-              "RowKey": "YourFin",
               "TimeStamp": "2022-11-22T16:00:52.7472",
               "Expires": null
             }]"#;
@@ -344,10 +306,38 @@ mod tests {
         let slice_iterator = SliceIterator::from_str(src);
         let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
 
-        while let Some(object) = json_array_iterator.get_next() {
-            let object = object.unwrap();
-            let object = std::str::from_utf8(object).unwrap();
-            println!("{}", object);
-        }
+        let value = json_array_iterator.get_next().unwrap().unwrap();
+
+        let mut object = value.unwrap_as_object().unwrap();
+
+        let param = object.get_next().unwrap().unwrap();
+        assert_eq!("Id", param.get_name().unwrap());
+
+        let value = param.get_value().unwrap();
+        assert_eq!("YourFin", value.as_str().unwrap());
+
+        let param = object.get_next().unwrap().unwrap();
+        assert_eq!("BaseDomain", param.get_name().unwrap());
+
+        let value = param.get_value().unwrap();
+        assert_eq!("your_fin.tech", value.as_str().unwrap());
+
+        let param = object.get_next().unwrap().unwrap();
+        assert_eq!("DomainsPool", param.get_name().unwrap());
+
+        let value = param.get_value().unwrap();
+        assert_eq!(true, value.is_array());
+
+        let param = object.get_next().unwrap().unwrap();
+        assert_eq!("CakeRegistrationId", param.get_name().unwrap());
+
+        let value = param.get_value().unwrap();
+        assert_eq!("9", value.as_str().unwrap());
+
+        let param = object.get_next().unwrap().unwrap();
+        assert_eq!("TimeStamp", param.get_name().unwrap());
+
+        let value = param.get_value().unwrap();
+        println!("{}", value.as_date_time().unwrap().to_rfc3339());
     }
 }
