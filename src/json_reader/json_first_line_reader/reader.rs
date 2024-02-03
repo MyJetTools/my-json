@@ -20,6 +20,10 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
         }
     }
 
+    pub fn get_src_slice(&self) -> &[u8] {
+        self.raw.get_src_slice()
+    }
+
     fn init_if_requires(&mut self) -> Result<bool, JsonParseError> {
         if self.had_init {
             let token = sync_reader::skip_white_spaces_and_get_expected_token(

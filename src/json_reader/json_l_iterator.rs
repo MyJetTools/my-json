@@ -11,6 +11,10 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonLIterator<TArrayOfBytesIte
         Self { data }
     }
 
+    pub fn get_src_slice(&self) -> &[u8] {
+        self.data.get_src_slice()
+    }
+
     pub fn get_next<'s>(&'s mut self) -> Option<Result<&'s [u8], JsonParseError>> {
         let start_value = match sync_reader::skip_white_spaces(&mut self.data) {
             Ok(value) => value,

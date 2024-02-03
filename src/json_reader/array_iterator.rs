@@ -17,6 +17,10 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIterator<TArrayOfByte
         }
     }
 
+    pub fn get_src_slice(&self) -> &[u8] {
+        self.data.get_src_slice()
+    }
+
     fn init(&mut self) -> Result<(), JsonParseError> {
         let result = sync_reader::next_token_must_be(&mut self.data, consts::OPEN_ARRAY);
 
