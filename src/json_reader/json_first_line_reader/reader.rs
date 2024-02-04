@@ -101,6 +101,13 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
     }
 }
 
+impl<'s> Into<JsonFirstLineReader<SliceIterator<'s>>> for &'s [u8] {
+    fn into(self) -> JsonFirstLineReader<SliceIterator<'s>> {
+        let slice_iterator = SliceIterator::new(self);
+        JsonFirstLineReader::new(slice_iterator)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rust_extensions::array_of_bytes_iterator::*;

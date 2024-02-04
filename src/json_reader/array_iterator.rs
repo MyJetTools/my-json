@@ -149,6 +149,13 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIterator<TArrayOfByte
     }
 }
 
+impl<'s> Into<JsonArrayIterator<SliceIterator<'s>>> for &'s [u8] {
+    fn into(self) -> JsonArrayIterator<SliceIterator<'s>> {
+        let slice_iterator = SliceIterator::new(self);
+        JsonArrayIterator::new(slice_iterator)
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
