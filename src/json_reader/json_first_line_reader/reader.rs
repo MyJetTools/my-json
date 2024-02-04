@@ -108,6 +108,13 @@ impl<'s> Into<JsonFirstLineReader<SliceIterator<'s>>> for &'s [u8] {
     }
 }
 
+impl<'s> Into<JsonFirstLineReader<SliceIterator<'s>>> for &'s str {
+    fn into(self) -> JsonFirstLineReader<SliceIterator<'s>> {
+        let slice_iterator = SliceIterator::new(self.as_bytes());
+        JsonFirstLineReader::new(slice_iterator)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rust_extensions::array_of_bytes_iterator::*;

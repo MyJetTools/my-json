@@ -156,6 +156,13 @@ impl<'s> Into<JsonArrayIterator<SliceIterator<'s>>> for &'s [u8] {
     }
 }
 
+impl<'s> Into<JsonArrayIterator<SliceIterator<'s>>> for &'s str {
+    fn into(self) -> JsonArrayIterator<SliceIterator<'s>> {
+        let slice_iterator = SliceIterator::new(self.as_bytes());
+        JsonArrayIterator::new(slice_iterator)
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
