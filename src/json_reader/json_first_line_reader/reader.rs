@@ -92,11 +92,11 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
             };
 
         return Some(Ok(JsonFirstLine {
-            data: self.raw.get_slice_to_current_pos(key_start),
-            name_start: 0,
-            name_end: key_end - key_start + 1,
-            value_start: value_start.pos - key_start,
-            value_end: value_end - key_start,
+            data: self.raw.get_src_slice(),
+            name_start: key_start,
+            name_end: key_end + 1,
+            value_start: value_start.pos,
+            value_end: value_end,
         }));
     }
 }
