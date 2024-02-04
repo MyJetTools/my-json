@@ -12,10 +12,14 @@ pub struct JsonFirstLine<'t> {
 }
 
 impl<'t> JsonFirstLine<'t> {
-    #[cfg(test)]
-    pub fn get_raw_name(&'t self) -> Result<&'t str, Utf8Error> {
+    pub fn get_raw_name(&'t self) -> Result<&'t str, JsonParseError> {
         let name = &self.data[self.name_start..self.name_end];
-        return std::str::from_utf8(name);
+        match std::str::from_utf8(name) {
+            Ok(result) => Ok(result),
+            Err(err) => Err(JsonParseError {
+                msg: format!("Can not parse name: {:?}", err),
+            }),
+        }
     }
 
     pub fn get_name(&'t self) -> Result<&'t str, JsonParseError> {
