@@ -1,0 +1,49 @@
+[
+    {
+        "TickSize": 1E-05,
+        "Id": "AUDCHF",
+        "Name": "AUDCHF",
+        "Digits": 5,
+        "Base": "AUD",
+        "Quote": "CHF",
+        "SwapScheduleId": null,
+        "GroupId": "FOREX",
+        "SubGroupId": null,
+        "Weight": 100,
+        "DayTimeout": 30,
+        "NightTimeout": 30,
+        "MarginCallPercent": 0,
+        "TradingDisabled": false,
+        "DaysOff": [],
+        "PartitionKey": "i",
+        "RowKey": "AUDCHF",
+        "TimeStamp": "2023-09-20T15:26:29.0066"
+    },
+    {
+        "Id": "AUDJPY",
+        "Name": "AUD/JPY",
+        "Digits": 3,
+        "Base": "AUD",
+        "Quote": "JPY",
+        "TickSize": 0.01,
+        "SwapScheduleId": null,
+        "GroupId": "FOREX",
+        "SubGroupId": null,
+        "Weight": 21,
+        "DayTimeout": 30,
+        "NightTimeout": 60,
+        "MarginCallPercent": 0,
+        "TradingDisabled": false,
+        "DaysOff": [
+            {
+                "DowFrom": 5,
+                "TimeFrom": "20:55:00",
+                "DowTo": 0,
+                "TimeTo": "21:05:00"
+            }
+        ],
+        "PartitionKey": "i",
+        "RowKey": "AUDJPY",
+        "TimeStamp": "2023-04-17T21:19:17.8279"
+    }
+]

@@ -358,4 +358,19 @@ mod tests {
         let value = param.get_value().unwrap();
         println!("{}", value.as_date_time().unwrap().to_rfc3339());
     }
+
+    #[test]
+    fn test_from_file() {
+        let src = std::fs::read_to_string("test.json").unwrap();
+
+        let slice_iterator = SliceIterator::from_str(src.as_str());
+        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
+
+        while let Some(itm) = json_array_iterator.get_next() {
+            let itm = itm.unwrap();
+
+            println!("-----");
+            println!("{}", itm.as_raw_str().unwrap());
+        }
+    }
 }
