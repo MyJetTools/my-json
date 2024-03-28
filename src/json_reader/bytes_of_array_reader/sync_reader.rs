@@ -147,11 +147,14 @@ pub fn find_the_end_of_json_object_or_array(
 pub fn find_the_end_of_json(src: &mut impl ArrayOfBytesIterator) -> Result<usize, JsonParseError> {
     skip_white_spaces_and_get_expected_token(src, ExpectedOpenJsonObjectToken)?;
     loop {
+        //let start = src.get_pos();
+
         skip_white_spaces_and_peek_expected_token(src, ExpectedJsonObjectKeyStart)?;
         find_the_end_of_the_string(src)?;
+
         //println!(
         //    "{}",
-        //    std::str::from_utf8(src.get_slice_to_current_pos(key_start.pos)).unwrap()
+        //    std::str::from_utf8(src.get_slice_to_current_pos(start)).unwrap()
         //);
         skip_white_spaces_and_get_expected_token(src, ExpectedJsonObjectKeyValueSeparator)?;
 
@@ -417,6 +420,10 @@ pub fn is_number(c: u8) -> bool {
     }
 
     if c == 'E' as u8 {
+        return true;
+    }
+
+    if c == 'e' as u8 {
         return true;
     }
 
