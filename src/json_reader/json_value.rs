@@ -15,8 +15,8 @@ impl<'s> AsJsonSlice for &'s [u8] {
 }
 
 pub struct JsonValue {
-    start: usize,
-    end: usize,
+    pub start: usize,
+    pub end: usize,
     /*
     String(&'s str),
     Number(&'s str),
@@ -309,10 +309,6 @@ impl JsonValue {
 
     pub fn as_raw_str<'s>(&self, as_json_slice: &'s impl AsJsonSlice) -> Option<&'s str> {
         let json_slice = as_json_slice.as_slice(self.start, self.end);
-
-        if crate::json_utils::is_null(json_slice) {
-            return None;
-        }
 
         let result = std::str::from_utf8(json_slice).unwrap();
 

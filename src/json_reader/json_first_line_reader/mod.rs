@@ -6,3 +6,5 @@ mod reader;
 pub use json_first_line::JsonKeyValue;
 //pub use read_mode::*;
 pub use reader::JsonFirstLineReader;
+mod json_field_name;
+pub use json_field_name::*;
