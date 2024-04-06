@@ -122,12 +122,8 @@ impl<'s> JsonValue<'s> {
                 true => Some("true"),
                 false => Some("false"),
             },
-            JsonValue::Array(_) => {
-                panic!("Json array can no be converted to string. Does not make sense")
-            }
-            JsonValue::Object(_) => {
-                panic!("Json object can no be converted to string. Does not make sense")
-            }
+            JsonValue::Array(array_object) => Some(std::str::from_utf8(array_object).unwrap()),
+            JsonValue::Object(json_object) => Some(std::str::from_utf8(json_object).unwrap()),
         }
     }
 
