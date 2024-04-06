@@ -8,6 +8,12 @@ pub trait AsJsonSlice {
     fn as_slice(&self, start_index: usize, end_index: usize) -> &[u8];
 }
 
+impl<'s> AsJsonSlice for &'s [u8] {
+    fn as_slice(&self, start_index: usize, end_index: usize) -> &[u8] {
+        self[start_index..end_index].as_ref()
+    }
+}
+
 pub struct JsonValue {
     start: usize,
     end: usize,
