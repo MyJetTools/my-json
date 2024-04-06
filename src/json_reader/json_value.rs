@@ -157,10 +157,6 @@ impl<'s> JsonValue<'s> {
         }
     }
 
-    pub fn as_raw_str(&self) -> Option<&'s str> {
-        let value = self.as_bytes()?;
-        Some(std::str::from_utf8(value).unwrap())
-    }
     pub fn as_bytes(&self) -> Option<&'s [u8]> {
         match self {
             JsonValue::Null => None,

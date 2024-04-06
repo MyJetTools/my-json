@@ -129,28 +129,28 @@ mod tests {
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("\"name1\"", item.get_raw_name(src_data).unwrap());
-        assert_eq!("\"123\"", item.get_raw_value(src_data).unwrap());
+        assert_eq!("\"name1\"", item.get_raw_name(&parser).unwrap());
+        assert_eq!("\"123\"", item.get_raw_value(&parser).unwrap());
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("\"name2\"", item.get_raw_name(src_data).unwrap());
-        assert_eq!("true", item.get_raw_value(src_data).unwrap());
+        assert_eq!("\"name2\"", item.get_raw_name(&parser).unwrap());
+        assert_eq!("true", item.get_raw_value(&parser).unwrap());
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("\"name3\"", item.get_raw_name(src_data).unwrap());
-        assert_eq!("null", item.get_raw_value(src_data).unwrap());
+        assert_eq!("\"name3\"", item.get_raw_name(&parser).unwrap());
+        assert_eq!("null", item.get_raw_value(&parser).unwrap());
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("\"name4\"", item.get_raw_name(src_data).unwrap());
-        assert_eq!("0.12", item.get_raw_value(src_data).unwrap());
+        assert_eq!("\"name4\"", item.get_raw_name(&parser).unwrap());
+        assert_eq!("0.12", item.get_raw_value(&parser).unwrap());
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("\"name5\"", item.get_raw_name(src_data).unwrap());
-        assert_eq!("{\"a\":\"b\"}", item.get_raw_value(src_data).unwrap());
+        assert_eq!("\"name5\"", item.get_raw_name(&parser).unwrap());
+        assert_eq!("{\"a\":\"b\"}", item.get_raw_value(&parser).unwrap());
 
         let item = parser.get_next();
 
@@ -167,22 +167,22 @@ mod tests {
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("processId", item.get_name(fist_line).unwrap());
+        assert_eq!("processId", item.get_name(&parser).unwrap());
         assert_eq!(
             "8269e2ac-fa3b-419a-8e65-1a606ba07942",
-            item.get_value(fist_line).unwrap().as_str().unwrap()
+            item.get_value(&parser).unwrap().as_str().unwrap()
         );
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("sellAmount", item.get_name(fist_line).unwrap());
-        assert_eq!("0.4", item.get_value(fist_line).unwrap().as_str().unwrap());
+        assert_eq!("sellAmount", item.get_name(&parser).unwrap());
+        assert_eq!("0.4", item.get_value(&parser).unwrap().as_str().unwrap());
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("buyAmount", item.get_name(fist_line).unwrap());
+        assert_eq!("buyAmount", item.get_name(&parser).unwrap());
 
-        let value = item.get_value(fist_line).unwrap();
+        let value = item.get_value(&parser).unwrap();
         assert!(value.is_null());
     }
 
@@ -203,11 +203,11 @@ mod tests {
 
         let slice_iterator = SliceIterator::new(json);
 
-        let mut json_array_iterator = JsonFirstLineReader::new(slice_iterator);
+        let mut first_line_reader = JsonFirstLineReader::new(slice_iterator);
 
-        while let Some(sub_json) = json_array_iterator.get_next() {
+        while let Some(sub_json) = first_line_reader.get_next() {
             let sub_json = sub_json.unwrap();
-            println!("{}", sub_json.get_name(json).unwrap(),);
+            println!("{}", sub_json.get_name(&first_line_reader).unwrap(),);
         }
     }
 
@@ -228,14 +228,14 @@ mod tests {
 
         let slice_iterator = SliceIterator::new(json);
 
-        let mut json_array_iterator = JsonFirstLineReader::new(slice_iterator);
+        let mut first_line_reader = JsonFirstLineReader::new(slice_iterator);
 
-        while let Some(sub_json) = json_array_iterator.get_next() {
+        while let Some(sub_json) = first_line_reader.get_next() {
             let sub_json = sub_json.unwrap();
             println!(
                 "{}:{}",
-                sub_json.get_raw_name(json).unwrap(),
-                sub_json.get_raw_value(json).unwrap()
+                sub_json.get_raw_name(&first_line_reader).unwrap(),
+                sub_json.get_raw_value(&first_line_reader).unwrap()
             );
         }
     }

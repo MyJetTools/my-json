@@ -1,7 +1,12 @@
 #[cfg(test)]
 use std::str::Utf8Error;
 
-use super::super::{JsonParseError, JsonValue};
+use rust_extensions::array_of_bytes_iterator::SliceIterator;
+
+use super::{
+    super::{JsonParseError, JsonValue},
+    JsonFirstLineReader,
+};
 
 pub struct JsonFirstLine {
     pub name_start: usize,
@@ -11,8 +16,11 @@ pub struct JsonFirstLine {
 }
 
 impl JsonFirstLine {
-    pub fn get_raw_name<'s>(&self, raw: &'s [u8]) -> Result<&'s str, JsonParseError> {
-        let name = &raw[self.name_start..self.name_end];
+    pub fn get_raw_name<'s>(
+        &self,
+        json_first_line_reader: &'s JsonFirstLineReader<SliceIterator>,
+    ) -> Result<&'s str, JsonParseError> {
+        let name = &json_first_line_reader.get_src_slice()[self.name_start..self.name_end];
         match std::str::from_utf8(name) {
             Ok(result) => Ok(result),
             Err(err) => Err(JsonParseError {
@@ -21,11 +29,14 @@ impl JsonFirstLine {
         }
     }
 
-    pub fn get_name<'s>(&self, raw: &'s [u8]) -> Result<&'s str, JsonParseError> {
+    pub fn get_name<'s>(
+        &self,
+        json_first_line_reader: &'s JsonFirstLineReader<SliceIterator>,
+    ) -> Result<&'s str, JsonParseError> {
         if self.name_end - self.name_start <= 2 {
             return Ok("");
         }
-        let name = &raw[self.name_start + 1..self.name_end - 1];
+        let name = &json_first_line_reader.get_src_slice()[self.name_start + 1..self.name_end - 1];
 
         if name.len() == 0 {
             return Err(JsonParseError::new(format!(
@@ -45,13 +56,19 @@ impl JsonFirstLine {
     }
 
     #[cfg(test)]
-    pub fn get_raw_value<'s>(&self, raw: &'s [u8]) -> Result<&'s str, Utf8Error> {
-        let value = &raw[self.value_start..self.value_end];
+    pub fn get_raw_value<'s>(
+        &self,
+        json_first_line_reader: &'s JsonFirstLineReader<SliceIterator>,
+    ) -> Result<&'s str, Utf8Error> {
+        let value = &json_first_line_reader.get_src_slice()[self.value_start..self.value_end];
         return std::str::from_utf8(value);
     }
 
-    pub fn get_value<'s>(&self, raw: &'s [u8]) -> Result<JsonValue<'s>, JsonParseError> {
-        let value = &raw[self.value_start..self.value_end];
+    pub fn get_value<'s>(
+        &self,
+        json_first_line_reader: &'s JsonFirstLineReader<SliceIterator>,
+    ) -> Result<JsonValue<'s>, JsonParseError> {
+        let value = &json_first_line_reader.get_src_slice()[self.value_start..self.value_end];
         JsonValue::new(value)
     }
 
