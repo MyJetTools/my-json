@@ -265,6 +265,10 @@ impl JsonValue {
         crate::json_utils::is_array(as_json_slice.as_slice(self.start, self.end))
     }
 
+    pub fn as_bytes<'s>(&self, as_json_slice: &'s impl AsJsonSlice) -> &'s [u8] {
+        as_json_slice.as_slice(self.start, self.end)
+    }
+
     pub fn unwrap_as_array<'s>(
         &self,
         as_json_slice: &'s impl AsJsonSlice,
