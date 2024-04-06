@@ -5,7 +5,7 @@ mod json_parse_error;
 
 pub use json_parse_error::JsonParseError;
 
-pub use json_first_line_reader::{JsonFirstLine, JsonFirstLineReader};
+pub use json_first_line_reader::{JsonFirstLineReader, JsonKeyValue};
 mod json_value;
 pub use json_value::JsonValue;
 mod array_parser_async;

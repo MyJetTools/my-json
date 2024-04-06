@@ -4,7 +4,7 @@ use rust_extensions::array_of_bytes_iterator::*;
 
 use self::sync_reader::find_the_end_of_the_string;
 
-use super::JsonFirstLine;
+use super::JsonKeyValue;
 
 use super::super::JsonParseError;
 
@@ -46,7 +46,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
         Ok(false)
     }
 
-    pub fn get_next(&mut self) -> Option<Result<JsonFirstLine, JsonParseError>> {
+    pub fn get_next(&mut self) -> Option<Result<JsonKeyValue, JsonParseError>> {
         match self.init_if_requires() {
             Ok(end_of_object) => {
                 if end_of_object {
@@ -92,7 +92,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
                 Err(err) => return Some(Err(err)),
             };
 
-        return Some(Ok(JsonFirstLine {
+        return Some(Ok(JsonKeyValue {
             name_start: key_start,
             name_end: key_end + 1,
             value_start: value_start.pos,

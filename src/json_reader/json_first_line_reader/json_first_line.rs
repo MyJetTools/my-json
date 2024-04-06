@@ -7,14 +7,14 @@ use crate::json_reader::json_value::AsJsonSlice;
 
 use super::super::{JsonParseError, JsonValue};
 
-pub struct JsonFirstLine {
+pub struct JsonKeyValue {
     pub name_start: usize,
     pub name_end: usize,
     pub value_start: usize,
     pub value_end: usize,
 }
 
-impl JsonFirstLine {
+impl JsonKeyValue {
     pub fn get_raw_name<'s>(&self, json: &'s impl AsJsonSlice) -> Result<&'s str, JsonParseError> {
         let name = json.as_slice(self.name_start, self.name_end);
         match std::str::from_utf8(name) {
@@ -32,6 +32,21 @@ impl JsonFirstLine {
         let name = json.as_slice(self.name_start, self.name_end);
 
         if let Some(name) = crate::json_utils::try_get_string_value(name) {
+            return Ok(name);
+        }
+
+        Err(JsonParseError {
+            msg: format!("Can not parse name: {}-{}", self.name_start, self.name_end),
+        })
+    }
+
+    pub fn get_unescaped_name<'s>(
+        &self,
+        json: &'s impl AsJsonSlice,
+    ) -> Result<&'s str, JsonParseError> {
+        let name = json.as_slice(self.name_start, self.name_end);
+
+        if let Some(name) = std::str::from_utf8(name).ok() {
             return Ok(name);
         }
 
