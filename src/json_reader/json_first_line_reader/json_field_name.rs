@@ -37,7 +37,7 @@ impl JsonFieldName {
         &self,
         json: &'s impl AsJsonSlice,
     ) -> Result<&'s str, JsonParseError> {
-        let name = json.as_slice(self.start, self.end);
+        let name = json.as_slice(self.start + 1, self.end - 1);
 
         if let Some(name) = std::str::from_utf8(name).ok() {
             return Ok(name);
