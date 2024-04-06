@@ -4,12 +4,12 @@ use rust_extensions::{
 
 use super::{array_iterator::JsonArrayIterator, JsonFirstLineReader, JsonParseError};
 
-pub trait AsJsonSlice {
-    fn as_slice(&self, start_index: usize, end_index: usize) -> &[u8];
+pub trait AsJsonSlice<'s> {
+    fn as_slice(&'s self, start_index: usize, end_index: usize) -> &'s [u8];
 }
 
-impl<'s> AsJsonSlice for &'s [u8] {
-    fn as_slice(&self, start_index: usize, end_index: usize) -> &[u8] {
+impl<'s> AsJsonSlice<'s> for &'s [u8] {
+    fn as_slice(&'s self, start_index: usize, end_index: usize) -> &[u8] {
         self[start_index..end_index].as_ref()
     }
 }
@@ -34,7 +34,7 @@ impl JsonValue {
 
     pub fn unwrap_value<'s>(
         &self,
-        as_json_slice: &'s impl AsJsonSlice,
+        as_json_slice: &'s impl AsJsonSlice<'s>,
     ) -> Result<UnwrappedValue<'s>, JsonParseError> {
         let slice = as_json_slice.as_slice(self.start, self.end);
 
@@ -105,14 +105,14 @@ impl JsonValue {
        }
     */
 
-    pub fn is_null(&self, as_json_slice: &impl AsJsonSlice) -> bool {
+    pub fn is_null<'s>(&self, as_json_slice: &'s impl AsJsonSlice<'s>) -> bool {
         let slice = as_json_slice.as_slice(self.start, self.end);
         crate::json_utils::is_null(slice)
     }
 
-    pub fn unwrap_as_number(
+    pub fn unwrap_as_number<'s>(
         &self,
-        as_json_slice: &impl AsJsonSlice,
+        as_json_slice: &'s impl AsJsonSlice<'s>,
     ) -> Result<Option<i64>, JsonParseError> {
         let slice = as_json_slice.as_slice(self.start, self.end);
         match crate::json_utils::is_number(slice) {
@@ -192,13 +192,13 @@ impl JsonValue {
             }
         }
     */
-    pub fn is_object(&self, as_json_slice: &impl AsJsonSlice) -> bool {
+    pub fn is_object<'s>(&self, as_json_slice: &'s impl AsJsonSlice<'s>) -> bool {
         crate::json_utils::is_object(as_json_slice.as_slice(self.start, self.end))
     }
 
     pub fn unwrap_as_object<'s>(
         &self,
-        as_json_slice: &'s impl AsJsonSlice,
+        as_json_slice: &'s impl AsJsonSlice<'s>,
     ) -> Result<JsonFirstLineReader<SliceIterator<'s>>, JsonParseError> {
         let slice = as_json_slice.as_slice(self.start, self.end);
 
@@ -212,19 +212,19 @@ impl JsonValue {
         ))
     }
 
-    pub fn unwrap_as_bool(&self, as_json_slice: &impl AsJsonSlice) -> Option<bool> {
+    pub fn unwrap_as_bool<'s>(&self, as_json_slice: &'s impl AsJsonSlice<'s>) -> Option<bool> {
         crate::json_utils::as_bool_value(as_json_slice.as_slice(self.start, self.end))
     }
 
-    pub fn is_bool(&self, as_json_slice: &impl AsJsonSlice) -> bool {
+    pub fn is_bool<'s>(&self, as_json_slice: &'s impl AsJsonSlice<'s>) -> bool {
         crate::json_utils::is_bool(as_json_slice.as_slice(self.start, self.end))
     }
 
-    pub fn is_string(&self, as_json_slice: &impl AsJsonSlice) -> bool {
+    pub fn is_string<'s>(&self, as_json_slice: &'s impl AsJsonSlice<'s>) -> bool {
         crate::json_utils::is_string(as_json_slice.as_slice(self.start, self.end))
     }
 
-    pub fn is_number(&self, as_json_slice: &impl AsJsonSlice) -> bool {
+    pub fn is_number<'s>(&self, as_json_slice: &'s impl AsJsonSlice<'s>) -> bool {
         match crate::json_utils::is_number(as_json_slice.as_slice(self.start, self.end)) {
             crate::json_utils::NumberType::NaN => {}
             crate::json_utils::NumberType::Number => return true,
@@ -233,7 +233,7 @@ impl JsonValue {
         false
     }
 
-    pub fn is_double(&self, as_json_slice: &impl AsJsonSlice) -> bool {
+    pub fn is_double<'s>(&self, as_json_slice: &'s impl AsJsonSlice<'s>) -> bool {
         match crate::json_utils::is_number(as_json_slice.as_slice(self.start, self.end)) {
             crate::json_utils::NumberType::NaN => {}
             crate::json_utils::NumberType::Number => {}
@@ -244,7 +244,7 @@ impl JsonValue {
 
     pub fn unwrap_as_double<'s>(
         &self,
-        as_json_slice: &'s impl AsJsonSlice,
+        as_json_slice: &'s impl AsJsonSlice<'s>,
     ) -> Result<Option<f64>, JsonParseError> {
         let slice = as_json_slice.as_slice(self.start, self.end);
 
@@ -267,17 +267,17 @@ impl JsonValue {
         }
     }
 
-    pub fn is_array(&self, as_json_slice: &impl AsJsonSlice) -> bool {
+    pub fn is_array<'s>(&self, as_json_slice: &'s impl AsJsonSlice<'s>) -> bool {
         crate::json_utils::is_array(as_json_slice.as_slice(self.start, self.end))
     }
 
-    pub fn as_bytes<'s>(&self, as_json_slice: &'s impl AsJsonSlice) -> &'s [u8] {
+    pub fn as_bytes<'s>(&self, as_json_slice: &'s impl AsJsonSlice<'s>) -> &'s [u8] {
         as_json_slice.as_slice(self.start, self.end)
     }
 
     pub fn unwrap_as_array<'s>(
         &self,
-        as_json_slice: &'s impl AsJsonSlice,
+        as_json_slice: &'s impl AsJsonSlice<'s>,
     ) -> Result<JsonArrayIterator<SliceIterator<'s>>, JsonParseError> {
         let slice = as_json_slice.as_slice(self.start, self.end);
 
@@ -291,7 +291,7 @@ impl JsonValue {
         ))
     }
 
-    pub fn as_str<'s>(&self, as_json_slice: &'s impl AsJsonSlice) -> Option<StrOrString<'s>> {
+    pub fn as_str<'s>(&self, as_json_slice: &'s impl AsJsonSlice<'s>) -> Option<StrOrString<'s>> {
         let json_slice = as_json_slice.as_slice(self.start, self.end);
 
         if crate::json_utils::is_null(json_slice) {
@@ -307,7 +307,7 @@ impl JsonValue {
         Some(result.into())
     }
 
-    pub fn as_unescaped_str<'s>(&self, as_json_slice: &'s impl AsJsonSlice) -> Option<&'s str> {
+    pub fn as_unescaped_str<'s>(&self, as_json_slice: &'s impl AsJsonSlice<'s>) -> Option<&'s str> {
         let json_slice = as_json_slice.as_slice(self.start, self.end);
 
         if crate::json_utils::is_null(json_slice) {
@@ -319,7 +319,7 @@ impl JsonValue {
         Some(result.into())
     }
 
-    pub fn as_raw_str<'s>(&self, as_json_slice: &'s impl AsJsonSlice) -> Option<&'s str> {
+    pub fn as_raw_str<'s>(&self, as_json_slice: &'s impl AsJsonSlice<'s>) -> Option<&'s str> {
         let json_slice = as_json_slice.as_slice(self.start, self.end);
 
         let result = std::str::from_utf8(json_slice).unwrap();
@@ -329,7 +329,7 @@ impl JsonValue {
 
     pub fn as_date_time<'s>(
         &self,
-        as_json_slice: &impl AsJsonSlice,
+        as_json_slice: &'s impl AsJsonSlice<'s>,
     ) -> Option<DateTimeAsMicroseconds> {
         let as_str = self.as_str(as_json_slice)?;
         DateTimeAsMicroseconds::from_str(as_str.as_str())
