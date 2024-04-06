@@ -45,7 +45,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
         Ok(false)
     }
 
-    pub fn get_next<'s>(&'s mut self) -> Option<Result<JsonFirstLine, JsonParseError>> {
+    pub fn get_next(&mut self) -> Option<Result<JsonFirstLine, JsonParseError>> {
         match self.init_if_requires() {
             Ok(end_of_object) => {
                 if end_of_object {
