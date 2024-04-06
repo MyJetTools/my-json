@@ -319,9 +319,10 @@ mod tests {
               "CakeRegistrationId": "9",
               "TimeStamp": "2022-11-22T16:00:52.7472",
               "Expires": null
-            }]"#;
+            }]"#
+        .as_bytes();
 
-        let slice_iterator = SliceIterator::from_str(src);
+        let slice_iterator = SliceIterator::new(src);
         let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
 
         let value = json_array_iterator.get_next().unwrap().unwrap();
@@ -329,33 +330,33 @@ mod tests {
         let mut object = value.unwrap_as_object().unwrap();
 
         let param = object.get_next().unwrap().unwrap();
-        assert_eq!("Id", param.get_name().unwrap());
+        assert_eq!("Id", param.get_name(src).unwrap());
 
-        let value = param.get_value().unwrap();
+        let value = param.get_value(src).unwrap();
         assert_eq!("YourFin", value.as_str().unwrap());
 
         let param = object.get_next().unwrap().unwrap();
-        assert_eq!("BaseDomain", param.get_name().unwrap());
+        assert_eq!("BaseDomain", param.get_name(src).unwrap());
 
-        let value = param.get_value().unwrap();
+        let value = param.get_value(src).unwrap();
         assert_eq!("your_fin.tech", value.as_str().unwrap());
 
         let param = object.get_next().unwrap().unwrap();
-        assert_eq!("DomainsPool", param.get_name().unwrap());
+        assert_eq!("DomainsPool", param.get_name(src).unwrap());
 
-        let value = param.get_value().unwrap();
+        let value = param.get_value(src).unwrap();
         assert_eq!(true, value.is_array());
 
         let param = object.get_next().unwrap().unwrap();
-        assert_eq!("CakeRegistrationId", param.get_name().unwrap());
+        assert_eq!("CakeRegistrationId", param.get_name(src).unwrap());
 
-        let value = param.get_value().unwrap();
+        let value = param.get_value(src).unwrap();
         assert_eq!("9", value.as_str().unwrap());
 
         let param = object.get_next().unwrap().unwrap();
-        assert_eq!("TimeStamp", param.get_name().unwrap());
+        assert_eq!("TimeStamp", param.get_name(src).unwrap());
 
-        let value = param.get_value().unwrap();
+        let value = param.get_value(src).unwrap();
         println!("{}", value.as_date_time().unwrap().to_rfc3339());
     }
 

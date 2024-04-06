@@ -45,7 +45,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
         Ok(false)
     }
 
-    pub fn get_next<'s>(&'s mut self) -> Option<Result<JsonFirstLine<'s>, JsonParseError>> {
+    pub fn get_next<'s>(&'s mut self) -> Option<Result<JsonFirstLine, JsonParseError>> {
         match self.init_if_requires() {
             Ok(end_of_object) => {
                 if end_of_object {
@@ -92,7 +92,6 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
             };
 
         return Some(Ok(JsonFirstLine {
-            data: self.raw.get_src_slice(),
             name_start: key_start,
             name_end: key_end + 1,
             value_start: value_start.pos,
@@ -123,35 +122,35 @@ mod tests {
 
     #[test]
     pub fn test_simple_parse() {
-        let src_data = "{\"name1\":\"123\", \"name2\":true,       \"name3\":null, \"name4\":0.12, \"name5\":{\"a\":\"b\"}}";
+        let src_data = "{\"name1\":\"123\", \"name2\":true,       \"name3\":null, \"name4\":0.12, \"name5\":{\"a\":\"b\"}}".as_bytes();
 
-        let slice_iterator = SliceIterator::from_str(src_data);
+        let slice_iterator = SliceIterator::new(src_data);
         let mut parser = JsonFirstLineReader::new(slice_iterator);
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("\"name1\"", item.get_raw_name().unwrap());
-        assert_eq!("\"123\"", item.get_raw_value().unwrap());
+        assert_eq!("\"name1\"", item.get_raw_name(src_data).unwrap());
+        assert_eq!("\"123\"", item.get_raw_value(src_data).unwrap());
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("\"name2\"", item.get_raw_name().unwrap());
-        assert_eq!("true", item.get_raw_value().unwrap());
+        assert_eq!("\"name2\"", item.get_raw_name(src_data).unwrap());
+        assert_eq!("true", item.get_raw_value(src_data).unwrap());
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("\"name3\"", item.get_raw_name().unwrap());
-        assert_eq!("null", item.get_raw_value().unwrap());
+        assert_eq!("\"name3\"", item.get_raw_name(src_data).unwrap());
+        assert_eq!("null", item.get_raw_value(src_data).unwrap());
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("\"name4\"", item.get_raw_name().unwrap());
-        assert_eq!("0.12", item.get_raw_value().unwrap());
+        assert_eq!("\"name4\"", item.get_raw_name(src_data).unwrap());
+        assert_eq!("0.12", item.get_raw_value(src_data).unwrap());
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("\"name5\"", item.get_raw_name().unwrap());
-        assert_eq!("{\"a\":\"b\"}", item.get_raw_value().unwrap());
+        assert_eq!("\"name5\"", item.get_raw_name(src_data).unwrap());
+        assert_eq!("{\"a\":\"b\"}", item.get_raw_value(src_data).unwrap());
 
         let item = parser.get_next();
 
@@ -160,30 +159,30 @@ mod tests {
 
     #[test]
     fn test_json_first_line() {
-        let fist_line = r#"{"processId":"8269e2ac-fa3b-419a-8e65-1a606ba07942","sellAmount":0.4,"buyAmount":null,"sellAsset":"ETH","buyAsset":"USDT"}"#;
+        let fist_line = r#"{"processId":"8269e2ac-fa3b-419a-8e65-1a606ba07942","sellAmount":0.4,"buyAmount":null,"sellAsset":"ETH","buyAsset":"USDT"}"#.as_bytes();
 
-        let slice_iterator = SliceIterator::from_str(fist_line);
+        let slice_iterator = SliceIterator::new(fist_line);
 
         let mut parser = JsonFirstLineReader::new(slice_iterator);
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("processId", item.get_name().unwrap());
+        assert_eq!("processId", item.get_name(fist_line).unwrap());
         assert_eq!(
             "8269e2ac-fa3b-419a-8e65-1a606ba07942",
-            item.get_value().unwrap().as_str().unwrap()
+            item.get_value(fist_line).unwrap().as_str().unwrap()
         );
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("sellAmount", item.get_name().unwrap());
-        assert_eq!("0.4", item.get_value().unwrap().as_str().unwrap());
+        assert_eq!("sellAmount", item.get_name(fist_line).unwrap());
+        assert_eq!("0.4", item.get_value(fist_line).unwrap().as_str().unwrap());
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("buyAmount", item.get_name().unwrap());
+        assert_eq!("buyAmount", item.get_name(fist_line).unwrap());
 
-        let value = item.get_value().unwrap();
+        let value = item.get_value(fist_line).unwrap();
         assert!(value.is_null());
     }
 
@@ -199,15 +198,16 @@ mod tests {
             ],
             "registered_address": "Addr",
             "retrieved_at": "2010-02-23"
-        }"###;
+        }"###
+            .as_bytes();
 
-        let slice_iterator = SliceIterator::from_str(json);
+        let slice_iterator = SliceIterator::new(json);
 
         let mut json_array_iterator = JsonFirstLineReader::new(slice_iterator);
 
         while let Some(sub_json) = json_array_iterator.get_next() {
             let sub_json = sub_json.unwrap();
-            println!("{}", sub_json.get_name().unwrap(),);
+            println!("{}", sub_json.get_name(json).unwrap(),);
         }
     }
 
@@ -223,9 +223,10 @@ mod tests {
             "SI": false,
             "UT": false,
             "VÃ": false
-        }"###;
+        }"###
+            .as_bytes();
 
-        let slice_iterator = SliceIterator::from_str(json);
+        let slice_iterator = SliceIterator::new(json);
 
         let mut json_array_iterator = JsonFirstLineReader::new(slice_iterator);
 
@@ -233,8 +234,8 @@ mod tests {
             let sub_json = sub_json.unwrap();
             println!(
                 "{}:{}",
-                sub_json.get_raw_name().unwrap(),
-                sub_json.get_raw_value().unwrap()
+                sub_json.get_raw_name(json).unwrap(),
+                sub_json.get_raw_value(json).unwrap()
             );
         }
     }
