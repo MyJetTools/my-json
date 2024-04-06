@@ -1,5 +1,4 @@
 pub mod array_iterator;
-pub mod consts;
 
 mod json_first_line_reader;
 mod json_parse_error;

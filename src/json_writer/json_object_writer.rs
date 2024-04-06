@@ -1,16 +1,14 @@
-use crate::EscapedJsonString;
-
 use super::JsonObject;
 
 pub struct JsonObjectWriter {
     first_element: bool,
-    raw: Vec<u8>,
+    raw: String,
 }
 
 impl JsonObjectWriter {
     pub fn new() -> Self {
-        let mut raw = Vec::new();
-        raw.push('{' as u8);
+        let mut raw = String::new();
+        raw.push('{');
         Self {
             raw,
             first_element: true,
@@ -25,15 +23,15 @@ impl JsonObjectWriter {
         if self.first_element {
             self.first_element = false;
         } else {
-            self.raw.push(',' as u8);
+            self.raw.push(',');
         }
     }
 
     fn write_key(&mut self, key: &str) {
-        self.raw.push('"' as u8);
-        self.raw
-            .extend_from_slice(EscapedJsonString::new(key).as_slice());
-        self.raw.extend_from_slice("\":".as_bytes());
+        self.raw.push('"');
+
+        crate::json_string_value::write_escaped_json_string_value(key, &mut self.raw);
+        self.raw.push_str("\":");
     }
 
     pub fn write(&mut self, key: &str, value: impl JsonObject) {
@@ -42,19 +40,36 @@ impl JsonObjectWriter {
         value.write_into(&mut self.raw);
     }
 
-    pub fn build(mut self) -> Vec<u8> {
-        self.raw.push('}' as u8);
+    pub fn build(mut self) -> String {
+        self.raw.push('}');
         self.raw
     }
 
-    pub fn build_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.raw.as_slice());
-        dest.push('}' as u8);
+    pub fn build_into(&self, dest: &mut String) {
+        dest.push_str(&self.raw);
+        dest.push('}');
     }
 }
 
 impl JsonObject for JsonObjectWriter {
-    fn write_into(&self, dest: &mut Vec<u8>) {
+    fn write_into(&self, dest: &mut String) {
         self.build_into(dest)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn basic_test() {
+        let mut json_write = super::JsonObjectWriter::new();
+
+        json_write.write("key", "value");
+
+        json_write.write("key2", "'value'");
+
+        let result = json_write.build();
+
+        assert_eq!("{\"key\":\"value\",\"key2\":\"\\'value\\'\"}", result);
     }
 }

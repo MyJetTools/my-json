@@ -1,6 +1,6 @@
 use super::bytes_of_array_reader::*;
-use super::{consts, JsonParseError};
-pub use consts::*;
+use super::JsonParseError;
+
 use rust_extensions::array_of_bytes_iterator::*;
 
 pub struct JsonArrayIteratorAsync<TArrayOfBytesIterator: ArrayOfBytesIteratorAsync> {
@@ -20,7 +20,8 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIteratorAsync>
     }
 
     async fn init(&mut self) -> Result<(), JsonParseError> {
-        let result = async_reader::next_token_must_be(&mut self.data, consts::OPEN_ARRAY).await;
+        let result =
+            async_reader::next_token_must_be(&mut self.data, crate::consts::OPEN_ARRAY).await;
 
         match result {
             FoundResult::Ok(_) => {
@@ -58,10 +59,11 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIteratorAsync>
             };
 
             match next_pos.value {
-                consts::CLOSE_ARRAY => {
+                crate::consts::CLOSE_ARRAY => {
                     return None;
                 }
-                consts::COMMA => match async_reader::skip_white_spaces(&mut self.data).await {
+                crate::consts::COMMA => match async_reader::skip_white_spaces(&mut self.data).await
+                {
                     Ok(value) => value,
                     Err(err) => return Some(Err(err)),
                 },
@@ -75,58 +77,60 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIteratorAsync>
         };
 
         match start_value.value {
-            consts::CLOSE_ARRAY => {
+            crate::consts::CLOSE_ARRAY => {
                 return None;
             }
-            consts::DOUBLE_QUOTE => {
+            crate::consts::DOUBLE_QUOTE => {
                 match async_reader::find_the_end_of_the_string(&mut self.data).await {
                     Ok(_) => {}
                     Err(err) => return Some(Err(err)),
                 }
             }
 
-            consts::OPEN_ARRAY => match async_reader::find_the_end_of_array(&mut self.data).await {
-                Ok(_) => {}
-                Err(err) => return Some(Err(err)),
-            },
+            crate::consts::OPEN_ARRAY => {
+                match async_reader::find_the_end_of_array(&mut self.data).await {
+                    Ok(_) => {}
+                    Err(err) => return Some(Err(err)),
+                }
+            }
 
-            consts::OPEN_BRACKET => {
+            crate::consts::OPEN_BRACKET => {
                 match async_reader::find_the_end_of_json(&mut self.data).await {
                     Ok(_) => {}
                     Err(err) => return Some(Err(err)),
                 }
             }
-            consts::START_OF_NULL_UPPER_CASE => {
+            crate::consts::START_OF_NULL_UPPER_CASE => {
                 if let Err(err) = async_reader::check_json_symbol(&mut self.data, "null").await {
                     return Some(Err(err));
                 }
             }
 
-            consts::START_OF_NULL_LOWER_CASE => {
+            crate::consts::START_OF_NULL_LOWER_CASE => {
                 if let Err(err) = async_reader::check_json_symbol(&mut self.data, "null").await {
                     return Some(Err(err));
                 }
             }
 
-            consts::START_OF_TRUE_UPPER_CASE => {
+            crate::consts::START_OF_TRUE_UPPER_CASE => {
                 if let Err(err) = async_reader::check_json_symbol(&mut self.data, "true").await {
                     return Some(Err(err));
                 }
             }
 
-            consts::START_OF_TRUE_LOWER_CASE => {
+            crate::consts::START_OF_TRUE_LOWER_CASE => {
                 if let Err(err) = async_reader::check_json_symbol(&mut self.data, "true").await {
                     return Some(Err(err));
                 }
             }
 
-            consts::START_OF_FALSE_UPPER_CASE => {
+            crate::consts::START_OF_FALSE_UPPER_CASE => {
                 if let Err(err) = async_reader::check_json_symbol(&mut self.data, "false").await {
                     return Some(Err(err));
                 }
             }
 
-            consts::START_OF_FALSE_LOWER_CASE => {
+            crate::consts::START_OF_FALSE_LOWER_CASE => {
                 if let Err(err) = async_reader::check_json_symbol(&mut self.data, "false").await {
                     return Some(Err(err));
                 }

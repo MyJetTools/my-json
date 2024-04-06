@@ -1,3 +1,5 @@
+use rust_extensions::StrOrString;
+
 const NULL_LC: [u8; 4] = [b'n', b'u', b'l', b'l'];
 const NULL_UC: [u8; 4] = [b'N', b'U', b'L', b'L'];
 
@@ -113,13 +115,47 @@ const TRUE_UC: [u8; 4] = [b'T', b'R', b'U', b'E'];
 const FALSE_LC: [u8; 5] = [b'f', b'a', b'l', b's', b'e'];
 const FALSE_UC: [u8; 5] = [b'F', b'A', b'L', b'S', b'E'];
 
-pub fn is_bool(src: &[u8]) -> Option<bool> {
+pub fn is_bool(src: &[u8]) -> bool {
+    if is_that_value(&TRUE_LC, &TRUE_UC, src) {
+        return true;
+    }
+
+    if is_that_value(&FALSE_LC, &FALSE_UC, src) {
+        return true;
+    }
+
+    false
+}
+
+pub fn as_bool_value(src: &[u8]) -> Option<bool> {
     if is_that_value(&TRUE_LC, &TRUE_UC, src) {
         return Some(true);
     }
 
     if is_that_value(&FALSE_LC, &FALSE_UC, src) {
         return Some(false);
+    }
+
+    None
+}
+
+pub fn is_array(src: &[u8]) -> bool {
+    src[0] == crate::consts::OPEN_ARRAY
+}
+
+pub fn is_object(src: &[u8]) -> bool {
+    src[0] == crate::consts::OPEN_BRACKET
+}
+
+pub fn is_string(src: &[u8]) -> bool {
+    src[0] == '"' as u8 || src[0] == '\'' as u8
+}
+
+pub fn try_get_string_value<'s>(src: &'s [u8]) -> Option<StrOrString<'s>> {
+    if is_string(src) {
+        return Some(crate::json_string_value::de_escape_json_string_value(
+            std::str::from_utf8(src[1..src.len() - 1].as_ref()).unwrap(),
+        ));
     }
 
     None

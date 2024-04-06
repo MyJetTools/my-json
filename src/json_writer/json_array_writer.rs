@@ -1,14 +1,14 @@
 use super::JsonObject;
 
 pub struct JsonArrayWriter {
-    raw: Vec<u8>,
+    raw: String,
     first_element: bool,
 }
 
 impl JsonArrayWriter {
     pub fn new() -> Self {
-        let mut raw = Vec::new();
-        raw.push('[' as u8);
+        let mut raw = String::new();
+        raw.push('[');
 
         Self {
             raw,
@@ -20,17 +20,17 @@ impl JsonArrayWriter {
         if self.first_element {
             self.first_element = false;
         } else {
-            self.raw.push(',' as u8);
+            self.raw.push(',');
         }
     }
 
     pub fn write_null_element(&mut self) {
         self.add_delimiter();
-        self.raw.extend_from_slice("null".as_bytes());
+        self.raw.push_str("null");
     }
 
-    pub fn build(mut self) -> Vec<u8> {
-        self.raw.push(']' as u8);
+    pub fn build(mut self) -> String {
+        self.raw.push(']');
         self.raw
     }
 
@@ -39,14 +39,14 @@ impl JsonArrayWriter {
         value.write_into(&mut self.raw);
     }
 
-    pub fn build_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.raw.as_slice());
-        dest.push(']' as u8);
+    pub fn build_into(&self, dest: &mut String) {
+        dest.push_str(&self.raw);
+        dest.push(']');
     }
 }
 
 impl JsonObject for JsonArrayWriter {
-    fn write_into(&self, dest: &mut Vec<u8>) {
+    fn write_into(&self, dest: &mut String) {
         self.build_into(dest)
     }
 }

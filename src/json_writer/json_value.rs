@@ -1,156 +1,159 @@
 use super::JsonObject;
 
 impl JsonObject for u8 {
-    fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.to_string().as_bytes());
+    fn write_into(&self, dest: &mut String) {
+        dest.push_str(self.to_string().as_str());
     }
 }
 
 impl JsonObject for i8 {
-    fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.to_string().as_bytes());
+    fn write_into(&self, dest: &mut String) {
+        dest.push_str(self.to_string().as_str());
     }
 }
 
 impl JsonObject for u16 {
-    fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.to_string().as_bytes());
+    fn write_into(&self, dest: &mut String) {
+        dest.push_str(self.to_string().as_str());
     }
 }
 
 impl JsonObject for i16 {
-    fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.to_string().as_bytes());
+    fn write_into(&self, dest: &mut String) {
+        dest.push_str(self.to_string().as_str());
     }
 }
 
 impl JsonObject for u32 {
-    fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.to_string().as_bytes());
+    fn write_into(&self, dest: &mut String) {
+        dest.push_str(self.to_string().as_str());
     }
 }
 
 impl JsonObject for i32 {
-    fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.to_string().as_bytes());
+    fn write_into(&self, dest: &mut String) {
+        dest.push_str(self.to_string().as_str());
     }
 }
 
 impl JsonObject for u64 {
-    fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.to_string().as_bytes());
+    fn write_into(&self, dest: &mut String) {
+        dest.push_str(self.to_string().as_str());
     }
 }
 
 impl JsonObject for i64 {
-    fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.to_string().as_bytes());
+    fn write_into(&self, dest: &mut String) {
+        dest.push_str(self.to_string().as_str());
     }
 }
 
 impl JsonObject for usize {
-    fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.to_string().as_bytes());
+    fn write_into(&self, dest: &mut String) {
+        dest.push_str(self.to_string().as_str());
     }
 }
 
 impl JsonObject for isize {
-    fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.to_string().as_bytes());
+    fn write_into(&self, dest: &mut String) {
+        dest.push_str(self.to_string().as_str());
     }
 }
 
 impl JsonObject for f64 {
-    fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.to_string().as_bytes());
+    fn write_into(&self, dest: &mut String) {
+        dest.push_str(self.to_string().as_str());
     }
 }
 
 impl JsonObject for f32 {
-    fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.to_string().as_bytes());
+    fn write_into(&self, dest: &mut String) {
+        dest.push_str(self.to_string().as_str());
     }
 }
 
 impl JsonObject for bool {
-    fn write_into(&self, dest: &mut Vec<u8>) {
+    fn write_into(&self, dest: &mut String) {
         if *self {
-            dest.extend_from_slice("true".as_bytes());
+            dest.push_str("true");
         } else {
-            dest.extend_from_slice("false".as_bytes());
+            dest.push_str("false");
         }
     }
 }
 
 impl JsonObject for String {
-    fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.push('"' as u8);
-        let escaped_json = crate::EscapedJsonString::new(self);
-        dest.extend_from_slice(escaped_json.as_slice());
-        dest.push('"' as u8);
+    fn write_into(&self, dest: &mut String) {
+        dest.push('"');
+        crate::json_string_value::write_escaped_json_string_value(self, dest);
+        dest.push('"');
     }
 }
 
 impl<'s> JsonObject for &'s str {
-    fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.push('"' as u8);
-        let escaped_json = crate::EscapedJsonString::new(self);
-        dest.extend_from_slice(escaped_json.as_slice());
-        dest.push('"' as u8);
+    fn write_into(&self, dest: &mut String) {
+        dest.push('"');
+        crate::json_string_value::write_escaped_json_string_value(self, dest);
+        dest.push('"');
     }
 }
 
 impl<'s> JsonObject for &'s String {
-    fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.push('"' as u8);
-        let escaped_json = crate::EscapedJsonString::new(self);
-        dest.extend_from_slice(escaped_json.as_slice());
-        dest.push('"' as u8);
+    fn write_into(&self, dest: &mut String) {
+        dest.push('"');
+        crate::json_string_value::write_escaped_json_string_value(self, dest);
+        dest.push('"');
     }
 }
 
 pub enum RawJsonObject<'s> {
-    AsVec(Vec<u8>),
-    AsSlice(&'s [u8]),
+    AsString(String),
+    AsStr(&'s str),
 }
 
 impl<'s> RawJsonObject<'s> {
-    pub fn new(value: Vec<u8>) -> Self {
-        RawJsonObject::AsVec(value)
+    pub fn new(value: String) -> Self {
+        RawJsonObject::AsString(value)
     }
 
-    pub fn as_slice(&'s self) -> &'s [u8] {
+    pub fn as_str(&'s self) -> &'s str {
         match self {
-            RawJsonObject::AsVec(vec) => vec.as_slice(),
-            RawJsonObject::AsSlice(slice) => slice,
+            RawJsonObject::AsString(vec) => vec,
+            RawJsonObject::AsStr(slice) => slice,
         }
     }
 }
 
 impl<'s> Into<RawJsonObject<'s>> for Vec<u8> {
     fn into(self) -> RawJsonObject<'s> {
-        RawJsonObject::AsVec(self)
+        RawJsonObject::AsString(String::from_utf8(self).unwrap())
+    }
+}
+
+impl<'s> Into<RawJsonObject<'s>> for String {
+    fn into(self) -> RawJsonObject<'s> {
+        RawJsonObject::AsString(self)
     }
 }
 
 impl<'s> JsonObject for RawJsonObject<'s> {
-    fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.as_slice());
+    fn write_into(&self, dest: &mut String) {
+        dest.push_str(self.as_str());
     }
 }
 
 pub struct JsonNullValue;
 
 impl JsonObject for JsonNullValue {
-    fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice("null".as_bytes());
+    fn write_into(&self, dest: &mut String) {
+        dest.push_str("null");
     }
 }
 
 pub struct EmptyJsonArray;
 
 impl JsonObject for EmptyJsonArray {
-    fn write_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice("[]".as_bytes());
+    fn write_into(&self, dest: &mut String) {
+        dest.push_str("[]");
     }
 }

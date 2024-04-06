@@ -1,4 +1,4 @@
-use super::{bytes_of_array_reader::*, consts, JsonParseError};
+use super::{bytes_of_array_reader::*, JsonParseError};
 use rust_extensions::array_of_bytes_iterator::*;
 
 pub struct JsonLIteratorAsync<TArrayOfBytesIterator: ArrayOfBytesIteratorAsync> {
@@ -18,7 +18,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIteratorAsync> JsonLIteratorAsync<TArray
         };
 
         match start_value.value {
-            consts::OPEN_BRACKET => {
+            crate::consts::OPEN_BRACKET => {
                 match async_reader::find_the_end_of_json_object_or_array(&mut self.data).await {
                     Ok(_) => {}
                     Err(err) => return Some(Err(err)),

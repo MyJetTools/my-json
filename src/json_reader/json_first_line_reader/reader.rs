@@ -1,4 +1,5 @@
-use crate::json_reader::{bytes_of_array_reader::*, consts};
+use crate::json_reader::bytes_of_array_reader::*;
+use crate::json_reader::json_value::AsJsonSlice;
 use rust_extensions::array_of_bytes_iterator::*;
 
 use self::sync_reader::find_the_end_of_the_string;
@@ -31,7 +32,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
                 ExpectedTokenJsonObjectSeparatorOrCloseBracket,
             )?;
 
-            if token.value == consts::CLOSE_BRACKET {
+            if token.value == crate::consts::CLOSE_BRACKET {
                 return Ok(true);
             }
         } else {
@@ -97,6 +98,14 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
             value_start: value_start.pos,
             value_end: value_end,
         }));
+    }
+}
+
+impl<TArrayOfBytesIterator: ArrayOfBytesIterator> AsJsonSlice
+    for JsonFirstLineReader<TArrayOfBytesIterator>
+{
+    fn as_slice(&self, start_index: usize, end_index: usize) -> &[u8] {
+        self.raw.get_src_slice()[start_index..end_index].as_ref()
     }
 }
 
@@ -170,20 +179,20 @@ mod tests {
         assert_eq!("processId", item.get_name(&parser).unwrap());
         assert_eq!(
             "8269e2ac-fa3b-419a-8e65-1a606ba07942",
-            item.get_value(&parser).unwrap().as_str().unwrap()
+            item.get_value().as_str(&parser).unwrap().as_str()
         );
 
         let item = parser.get_next().unwrap().unwrap();
 
         assert_eq!("sellAmount", item.get_name(&parser).unwrap());
-        assert_eq!("0.4", item.get_value(&parser).unwrap().as_str().unwrap());
+        assert_eq!("0.4", item.get_value().as_str(&parser).unwrap().as_str());
 
         let item = parser.get_next().unwrap().unwrap();
 
         assert_eq!("buyAmount", item.get_name(&parser).unwrap());
 
-        let value = item.get_value(&parser).unwrap();
-        assert!(value.is_null());
+        let value = item.get_value();
+        assert!(value.is_null(&parser));
     }
 
     #[test]

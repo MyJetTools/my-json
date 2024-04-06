@@ -1,6 +1,6 @@
 use rust_extensions::array_of_bytes_iterator::*;
 
-use crate::json_reader::{consts, JsonParseError};
+use crate::json_reader::JsonParseError;
 
 use super::*;
 
@@ -14,44 +14,44 @@ pub async fn find_the_end_of_the_object_value(
     }
 
     match value_start {
-        consts::START_OF_TRUE_LOWER_CASE => {
+        crate::consts::START_OF_TRUE_LOWER_CASE => {
             check_json_symbol(src, "true").await?;
             return Ok(src.get_pos());
         }
-        consts::START_OF_TRUE_UPPER_CASE => {
+        crate::consts::START_OF_TRUE_UPPER_CASE => {
             check_json_symbol(src, "true").await?;
             return Ok(src.get_pos());
         }
 
-        consts::START_OF_FALSE_LOWER_CASE => {
+        crate::consts::START_OF_FALSE_LOWER_CASE => {
             check_json_symbol(src, "false").await?;
             return Ok(src.get_pos());
         }
-        consts::START_OF_FALSE_UPPER_CASE => {
+        crate::consts::START_OF_FALSE_UPPER_CASE => {
             check_json_symbol(src, "false").await?;
             return Ok(src.get_pos());
         }
 
-        consts::START_OF_NULL_LOWER_CASE => {
+        crate::consts::START_OF_NULL_LOWER_CASE => {
             check_json_symbol(src, "null").await?;
             return Ok(src.get_pos());
         }
-        consts::START_OF_NULL_UPPER_CASE => {
+        crate::consts::START_OF_NULL_UPPER_CASE => {
             check_json_symbol(src, "null").await?;
             return Ok(src.get_pos());
         }
 
-        consts::DOUBLE_QUOTE => {
+        crate::consts::DOUBLE_QUOTE => {
             let result = find_the_end_of_the_string(src).await?;
             return Ok(result.pos + 1);
         }
 
-        consts::OPEN_BRACKET => {
+        crate::consts::OPEN_BRACKET => {
             let pos = find_the_end_of_json_object_or_array(src).await?;
             return Ok(pos.pos + 1);
         }
 
-        consts::OPEN_ARRAY => {
+        crate::consts::OPEN_ARRAY => {
             let result = find_the_end_of_json_object_or_array(src).await?;
             return Ok(result.pos + 1);
         }
@@ -79,16 +79,17 @@ pub async fn find_the_end_of_json_object_or_array(
 
     let mut brackets = Vec::new();
 
-    let open_open_bracket =
-        if next_value.value == consts::OPEN_BRACKET || next_value.value == consts::OPEN_ARRAY {
-            next_value.value
-        } else {
-            panic!(
-                "Bug... It has to be {} or {} symbol",
-                consts::OPEN_BRACKET as char,
-                consts::OPEN_ARRAY as char
-            )
-        };
+    let open_open_bracket = if next_value.value == crate::consts::OPEN_BRACKET
+        || next_value.value == crate::consts::OPEN_ARRAY
+    {
+        next_value.value
+    } else {
+        panic!(
+            "Bug... It has to be {} or {} symbol",
+            crate::consts::OPEN_BRACKET as char,
+            crate::consts::OPEN_ARRAY as char
+        )
+    };
 
     brackets.push(open_open_bracket);
     //println!(
@@ -99,7 +100,7 @@ pub async fn find_the_end_of_json_object_or_array(
 
     while let Some(next_value) = src.get_next().await.unwrap() {
         match next_value.value {
-            consts::DOUBLE_QUOTE => {
+            crate::consts::DOUBLE_QUOTE => {
                 //let start = next_value.pos;
                 skip_to_the_end_of_the_string(src).await?;
 
@@ -108,7 +109,7 @@ pub async fn find_the_end_of_json_object_or_array(
                 //     String::from_utf8(src.get_slice_to_current_pos(start).await.unwrap()).unwrap()
                 // );
             }
-            consts::OPEN_ARRAY => {
+            crate::consts::OPEN_ARRAY => {
                 brackets.push(next_value.value);
 
                 //   println!(
@@ -117,7 +118,7 @@ pub async fn find_the_end_of_json_object_or_array(
                 //       brackets.iter().map(|x| *x as char).collect::<Vec<char>>()
                 //   );
             }
-            consts::OPEN_BRACKET => {
+            crate::consts::OPEN_BRACKET => {
                 brackets.push(next_value.value);
                 // println!(
                 //   "Open Object {}: {:?}",
@@ -126,7 +127,7 @@ pub async fn find_the_end_of_json_object_or_array(
                 //);
             }
 
-            consts::CLOSE_BRACKET => {
+            crate::consts::CLOSE_BRACKET => {
                 let open_bracket = brackets.remove(brackets.len() - 1);
                 //println!(
                 //    "Close Object {}: {:?}",
@@ -134,7 +135,7 @@ pub async fn find_the_end_of_json_object_or_array(
                 //    brackets.iter().map(|x| *x as char).collect::<Vec<char>>()
                 //);
 
-                if open_bracket == consts::OPEN_BRACKET {
+                if open_bracket == crate::consts::OPEN_BRACKET {
                     if brackets.len() == 0 {
                         return Ok(next_value);
                     }
@@ -146,14 +147,14 @@ pub async fn find_the_end_of_json_object_or_array(
                 }
             }
 
-            consts::CLOSE_ARRAY => {
+            crate::consts::CLOSE_ARRAY => {
                 let open_bracket = brackets.remove(brackets.len() - 1);
                 // println!(
                 //     "Close Array {}: {:?}",
                 //     next_value.pos,
                 //    brackets.iter().map(|x| *x as char).collect::<Vec<char>>()
                 //);
-                if open_bracket == consts::OPEN_ARRAY {
+                if open_bracket == crate::consts::OPEN_ARRAY {
                     if brackets.len() == 0 {
                         return Ok(next_value);
                     }
@@ -212,7 +213,7 @@ pub async fn find_the_end_of_json(
         )
         .await?;
 
-        if token.value == consts::CLOSE_BRACKET {
+        if token.value == crate::consts::CLOSE_BRACKET {
             return Ok(token.pos);
         }
     }
@@ -236,7 +237,7 @@ pub async fn find_the_end_of_array(
         let separator_or_end =
             skip_white_spaces_and_get_expected_token(src, ExpectedEndOfArrayOrComma).await?;
 
-        if separator_or_end.value == consts::CLOSE_ARRAY {
+        if separator_or_end.value == crate::consts::CLOSE_ARRAY {
             return Ok(separator_or_end);
         }
     }
@@ -385,7 +386,7 @@ pub async fn find_the_end_of_the_string(
             continue;
         }
 
-        if next_value.value == consts::DOUBLE_QUOTE {
+        if next_value.value == crate::consts::DOUBLE_QUOTE {
             return Ok(next_value);
         }
     }
@@ -424,7 +425,7 @@ pub async fn skip_to_the_end_of_the_string(
             continue;
         }
 
-        if next_value.value == consts::DOUBLE_QUOTE {
+        if next_value.value == crate::consts::DOUBLE_QUOTE {
             return Ok(next_value);
         }
     }

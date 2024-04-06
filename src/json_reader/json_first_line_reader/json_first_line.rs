@@ -64,17 +64,7 @@ impl JsonFirstLine {
         return std::str::from_utf8(value);
     }
 
-    pub fn get_value<'s>(
-        &self,
-        json_first_line_reader: &'s JsonFirstLineReader<SliceIterator>,
-    ) -> Result<JsonValue<'s>, JsonParseError> {
-        let value = &json_first_line_reader.get_src_slice()[self.value_start..self.value_end];
-        JsonValue::new(value)
+    pub fn get_value(&self) -> JsonValue {
+        JsonValue::new(self.value_start, self.value_end)
     }
-
-    /*
-    pub fn get_value_as_date_time(&self) -> Option<DateTimeAsMicroseconds> {
-
-    }
-    */
 }
