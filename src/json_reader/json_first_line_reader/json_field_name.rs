@@ -8,10 +8,7 @@ pub struct JsonFieldName {
 }
 
 impl JsonFieldName {
-    pub fn as_raw_str<'s>(
-        &self,
-        json: &'s impl AsJsonSlice<'s>,
-    ) -> Result<&'s str, JsonParseError> {
+    pub fn as_raw_str<'s>(&self, json: &'s impl AsJsonSlice) -> Result<&'s str, JsonParseError> {
         let name = json.as_slice(self.start, self.end);
         match std::str::from_utf8(name) {
             Ok(result) => Ok(result),
@@ -23,7 +20,7 @@ impl JsonFieldName {
 
     pub fn as_str<'s>(
         &self,
-        json: &'s impl AsJsonSlice<'s>,
+        json: &'s impl AsJsonSlice,
     ) -> Result<StrOrString<'s>, JsonParseError> {
         let name = json.as_slice(self.start, self.end);
 
@@ -38,7 +35,7 @@ impl JsonFieldName {
 
     pub fn as_unescaped_name<'s>(
         &self,
-        json: &'s impl AsJsonSlice<'s>,
+        json: &'s impl AsJsonSlice,
     ) -> Result<&'s str, JsonParseError> {
         let name = json.as_slice(self.start, self.end);
 
