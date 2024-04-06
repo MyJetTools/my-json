@@ -358,31 +358,34 @@ mod tests {
         let mut object = value.unwrap_as_object(&json_array_iterator).unwrap();
 
         let param = object.get_next().unwrap().unwrap();
-        assert_eq!("Id", param.get_name(&object).unwrap());
+        assert_eq!("Id", param.get_name(&object).unwrap().as_str());
 
         let value = param.get_value();
         assert_eq!("YourFin", value.as_str(&object).unwrap().as_str());
 
         let param = object.get_next().unwrap().unwrap();
-        assert_eq!("BaseDomain", param.get_name(&object).unwrap());
+        assert_eq!("BaseDomain", param.get_name(&object).unwrap().as_str());
 
         let value = param.get_value();
         assert_eq!("your_fin.tech", value.as_str(&object).unwrap().as_str());
 
         let param = object.get_next().unwrap().unwrap();
-        assert_eq!("DomainsPool", param.get_name(&object).unwrap());
+        assert_eq!("DomainsPool", param.get_name(&object).unwrap().as_str());
 
         let value = param.get_value();
         assert_eq!(true, value.is_array(&object));
 
         let param = object.get_next().unwrap().unwrap();
-        assert_eq!("CakeRegistrationId", param.get_name(&object).unwrap());
+        assert_eq!(
+            "CakeRegistrationId",
+            param.get_name(&object).unwrap().as_str()
+        );
 
         let value = param.get_value();
         assert_eq!("9", value.as_str(&object).unwrap().as_str());
 
         let param = object.get_next().unwrap().unwrap();
-        assert_eq!("TimeStamp", param.get_name(&object).unwrap());
+        assert_eq!("TimeStamp", param.get_name(&object).unwrap().as_str());
 
         let value = param.get_value();
         println!("{}", value.as_date_time(&object).unwrap().to_rfc3339());

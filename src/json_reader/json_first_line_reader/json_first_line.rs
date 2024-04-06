@@ -1,12 +1,11 @@
 #[cfg(test)]
 use std::str::Utf8Error;
 
-use rust_extensions::array_of_bytes_iterator::SliceIterator;
+use rust_extensions::StrOrString;
 
-use super::{
-    super::{JsonParseError, JsonValue},
-    JsonFirstLineReader,
-};
+use crate::json_reader::json_value::AsJsonSlice;
+
+use super::super::{JsonParseError, JsonValue};
 
 pub struct JsonFirstLine {
     pub name_start: usize,
@@ -16,11 +15,8 @@ pub struct JsonFirstLine {
 }
 
 impl JsonFirstLine {
-    pub fn get_raw_name<'s>(
-        &self,
-        json_first_line_reader: &'s JsonFirstLineReader<SliceIterator>,
-    ) -> Result<&'s str, JsonParseError> {
-        let name = &json_first_line_reader.get_src_slice()[self.name_start..self.name_end];
+    pub fn get_raw_name<'s>(&self, json: &'s impl AsJsonSlice) -> Result<&'s str, JsonParseError> {
+        let name = json.as_slice(self.name_start, self.name_end);
         match std::str::from_utf8(name) {
             Ok(result) => Ok(result),
             Err(err) => Err(JsonParseError {
@@ -31,37 +27,23 @@ impl JsonFirstLine {
 
     pub fn get_name<'s>(
         &self,
-        json_first_line_reader: &'s JsonFirstLineReader<SliceIterator>,
-    ) -> Result<&'s str, JsonParseError> {
-        if self.name_end - self.name_start <= 2 {
-            return Ok("");
-        }
-        let name = &json_first_line_reader.get_src_slice()[self.name_start + 1..self.name_end - 1];
+        json: &'s impl AsJsonSlice,
+    ) -> Result<StrOrString<'s>, JsonParseError> {
+        let name = json.as_slice(self.name_start, self.name_end);
 
-        if name.len() == 0 {
-            return Err(JsonParseError::new(format!(
-                "Invalid name len: {}",
-                name.len()
-            )));
+        if let Some(name) = crate::json_utils::try_get_string_value(name) {
+            return Ok(name);
         }
 
-        let result = std::str::from_utf8(name);
-        match result {
-            Ok(str) => Ok(str),
-            Err(err) => Err(JsonParseError::new(format!(
-                "Can convert name to utf8 string. Err {}",
-                err
-            ))),
-        }
+        Err(JsonParseError {
+            msg: format!("Can not parse name: {}-{}", self.name_start, self.name_end),
+        })
     }
 
     #[cfg(test)]
-    pub fn get_raw_value<'s>(
-        &self,
-        json_first_line_reader: &'s JsonFirstLineReader<SliceIterator>,
-    ) -> Result<&'s str, Utf8Error> {
-        let value = &json_first_line_reader.get_src_slice()[self.value_start..self.value_end];
-        return std::str::from_utf8(value);
+    pub fn get_raw_value<'s>(&self, json: &'s impl AsJsonSlice) -> Result<&'s str, Utf8Error> {
+        let slice = json.as_slice(self.value_start, self.value_end);
+        return std::str::from_utf8(slice);
     }
 
     pub fn get_value(&self) -> JsonValue {

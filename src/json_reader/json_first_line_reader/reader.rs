@@ -176,7 +176,7 @@ mod tests {
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("processId", item.get_name(&parser).unwrap());
+        assert_eq!("processId", item.get_name(&parser).unwrap().as_str());
         assert_eq!(
             "8269e2ac-fa3b-419a-8e65-1a606ba07942",
             item.get_value().as_str(&parser).unwrap().as_str()
@@ -184,12 +184,12 @@ mod tests {
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("sellAmount", item.get_name(&parser).unwrap());
+        assert_eq!("sellAmount", item.get_name(&parser).unwrap().as_str());
         assert_eq!("0.4", item.get_value().as_str(&parser).unwrap().as_str());
 
         let item = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("buyAmount", item.get_name(&parser).unwrap());
+        assert_eq!("buyAmount", item.get_name(&parser).unwrap().as_str());
 
         let value = item.get_value();
         assert!(value.is_null(&parser));
@@ -216,7 +216,10 @@ mod tests {
 
         while let Some(sub_json) = first_line_reader.get_next() {
             let sub_json = sub_json.unwrap();
-            println!("{}", sub_json.get_name(&first_line_reader).unwrap(),);
+            println!(
+                "{}",
+                sub_json.get_name(&first_line_reader).unwrap().as_str(),
+            );
         }
     }
 
