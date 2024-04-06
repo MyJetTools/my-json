@@ -294,15 +294,27 @@ impl JsonValue {
     pub fn as_str<'s>(&self, as_json_slice: &'s impl AsJsonSlice) -> Option<StrOrString<'s>> {
         let json_slice = as_json_slice.as_slice(self.start, self.end);
 
+        if crate::json_utils::is_null(json_slice) {
+            return None;
+        }
+
         if let Some(value) = crate::json_utils::try_get_string_value(json_slice) {
             return Some(value);
         }
+
+        let result = std::str::from_utf8(json_slice).unwrap();
+
+        Some(result.into())
+    }
+
+    pub fn as_unescaped_str<'s>(&self, as_json_slice: &'s impl AsJsonSlice) -> Option<&'s str> {
+        let json_slice = as_json_slice.as_slice(self.start, self.end);
 
         if crate::json_utils::is_null(json_slice) {
             return None;
         }
 
-        let result = std::str::from_utf8(json_slice).unwrap();
+        let result = std::str::from_utf8(json_slice[1..json_slice.len() - 1].as_ref()).unwrap();
 
         Some(result.into())
     }
