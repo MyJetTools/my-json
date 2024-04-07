@@ -1,4 +1,6 @@
-use super::{super::JsonValue, JsonFieldName};
+use crate::json_reader::AsJsonSlice;
+
+use super::{super::JsonValue, JsonFieldName, JsonKeyValueRef};
 
 pub struct JsonKeyValue {
     pub name: JsonFieldName,
@@ -17,5 +19,9 @@ impl JsonKeyValue {
                 end: value_end,
             },
         }
+    }
+
+    pub fn as_ref<'s>(&self, json: &'s impl AsJsonSlice) -> JsonKeyValueRef<'s> {
+        JsonKeyValueRef::new(self.name.clone(), self.value.clone(), json.as_slice())
     }
 }

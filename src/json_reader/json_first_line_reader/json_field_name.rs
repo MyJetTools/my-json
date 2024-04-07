@@ -2,15 +2,23 @@ use rust_extensions::StrOrString;
 
 use crate::json_reader::{json_value::AsJsonSlice, JsonParseError};
 
+use super::JsonFieldNameRef;
+
+#[derive(Debug, Clone)]
 pub struct JsonFieldName {
     pub start: usize,
     pub end: usize,
 }
 
 impl JsonFieldName {
+    pub fn as_ref<'s>(&self, json: &'s impl AsJsonSlice) -> JsonFieldNameRef<'s> {
+        JsonFieldNameRef::new(self.clone(), json.as_slice())
+    }
+
     pub fn as_raw_str<'s>(&self, json: &'s impl AsJsonSlice) -> Result<&'s str, JsonParseError> {
-        let name = json.as_slice(self.start, self.end);
-        match std::str::from_utf8(name) {
+        let slice = json.as_slice()[self.start..self.end].as_ref();
+
+        match std::str::from_utf8(slice) {
             Ok(result) => Ok(result),
             Err(err) => Err(JsonParseError {
                 msg: format!("Can not parse name: {:?}", err),
@@ -22,9 +30,9 @@ impl JsonFieldName {
         &self,
         json: &'s impl AsJsonSlice,
     ) -> Result<StrOrString<'s>, JsonParseError> {
-        let name = json.as_slice(self.start, self.end);
+        let slice = json.as_slice()[self.start..self.end].as_ref();
 
-        if let Some(name) = crate::json_utils::try_get_string_value(name) {
+        if let Some(name) = crate::json_utils::try_get_string_value(slice) {
             return Ok(name);
         }
 
@@ -37,9 +45,9 @@ impl JsonFieldName {
         &self,
         json: &'s impl AsJsonSlice,
     ) -> Result<&'s str, JsonParseError> {
-        let name = json.as_slice(self.start + 1, self.end - 1);
+        let slice = json.as_slice()[self.start + 1..self.end - 1].as_ref();
 
-        if let Some(name) = std::str::from_utf8(name).ok() {
+        if let Some(name) = std::str::from_utf8(slice).ok() {
             return Ok(name);
         }
 

@@ -104,8 +104,8 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
 impl<TArrayOfBytesIterator: ArrayOfBytesIterator> AsJsonSlice
     for JsonFirstLineReader<TArrayOfBytesIterator>
 {
-    fn as_slice(&self, start_index: usize, end_index: usize) -> &[u8] {
-        self.raw.get_src_slice()[start_index..end_index].as_ref()
+    fn as_slice(&self) -> &[u8] {
+        self.raw.get_src_slice()
     }
 }
 

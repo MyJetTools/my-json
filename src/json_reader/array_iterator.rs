@@ -171,8 +171,8 @@ impl<'s> Into<JsonArrayIterator<SliceIterator<'s>>> for &'s str {
 impl<TArrayOfBytesIterator: ArrayOfBytesIterator> AsJsonSlice
     for JsonArrayIterator<TArrayOfBytesIterator>
 {
-    fn as_slice(&self, start_index: usize, end_index: usize) -> &[u8] {
-        self.data.get_src_slice()[start_index..end_index].as_ref()
+    fn as_slice(&self) -> &[u8] {
+        self.data.get_src_slice()
     }
 }
 

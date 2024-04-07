@@ -16,3 +16,5 @@ pub use json_l_iterator::*;
 mod json_l_iterator_async;
 pub use json_l_iterator_async::*;
 pub mod bytes_of_array_reader;
+mod json_value_ref;
+pub use json_value_ref::*;
