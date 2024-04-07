@@ -14,23 +14,30 @@ fn has_to_escape(src: &[u8]) -> bool {
     false
 }
 
-pub fn write_escaped_json_string_value(src: &str, out: &mut String) {
+pub fn write_escaped_json_string_value(src: &str, out: &mut Vec<u8>) {
+    let mut buffer = [0; 2];
+
     for c in src.chars() {
         match c {
             DOUBLE_QUOTE => {
-                out.push('\\');
-                out.push('"');
+                out.push(b'\\');
+                out.push(b'"');
             }
             BACK_SLASH => {
-                out.push('\\');
-                out.push('\\');
+                out.push(b'\\');
+                out.push(b'\\');
             }
             SINGLE_QUOTE => {
-                out.push('\\');
-                out.push('\'');
+                out.push(b'\\');
+                out.push(b'\'');
             }
             _ => {
-                out.push(c);
+                if c.len_utf8() == 2 {
+                    c.encode_utf8(&mut buffer);
+                    out.extend_from_slice(buffer.as_slice());
+                } else {
+                    out.push(c as u8);
+                }
             }
         }
     }
