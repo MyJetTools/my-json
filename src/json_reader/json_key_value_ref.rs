@@ -1,6 +1,6 @@
 use crate::json_reader::JsonValueRef;
 
-use super::{super::JsonValue, JsonFieldName, JsonFieldNameRef};
+use super::{JsonFieldName, JsonFieldNameRef, JsonValue};
 
 pub struct JsonKeyValueRef<'s> {
     pub name: JsonFieldNameRef<'s>,
