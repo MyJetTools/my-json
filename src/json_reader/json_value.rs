@@ -322,6 +322,11 @@ impl JsonValue {
             return None;
         }
 
+        if slice.len() <= 2 {
+            let result = std::str::from_utf8(slice).unwrap();
+            return Some(result);
+        }
+
         let result = std::str::from_utf8(slice[1..slice.len() - 1].as_ref()).unwrap();
 
         Some(result.into())
