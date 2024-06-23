@@ -181,7 +181,7 @@ pub fn find_the_end_of_json(src: &mut impl ArrayOfBytesIterator) -> Result<usize
 pub fn find_the_end_of_array(
     src: &mut impl ArrayOfBytesIterator,
 ) -> Result<NextValue, JsonParseError> {
-    //let open_array_token = src.get_next().unwrap();
+    let _open_array_token = src.get_next().unwrap();
 
     /*
        println!(
