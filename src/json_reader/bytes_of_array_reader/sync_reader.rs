@@ -181,13 +181,14 @@ pub fn find_the_end_of_json(src: &mut impl ArrayOfBytesIterator) -> Result<usize
 pub fn find_the_end_of_array(
     src: &mut impl ArrayOfBytesIterator,
 ) -> Result<NextValue, JsonParseError> {
-    let open_array_token = src.get_next().unwrap();
+    //let open_array_token = src.get_next().unwrap();
 
-    println!(
-        "Found Open Array Token: {} at {}",
-        open_array_token.value as char, open_array_token.pos
-    );
-
+    /*
+       println!(
+           "Found Open Array Token: {} at {}",
+           open_array_token.value as char, open_array_token.pos
+       );
+    */
     loop {
         let value_start = skip_white_spaces_and_peek_expected_token(src, ExpectedJsonValueStart)?;
         find_the_end_of_the_object_value(src, value_start.value)?;

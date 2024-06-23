@@ -222,13 +222,14 @@ pub async fn find_the_end_of_json(
 pub async fn find_the_end_of_array(
     src: &mut impl ArrayOfBytesIteratorAsync,
 ) -> Result<NextValue, JsonParseError> {
-    let open_array_token = src.get_next().await.unwrap().unwrap();
+    //let open_array_token = src.get_next().await.unwrap().unwrap();
 
-    println!(
-        "Found Open Array Token: {} at {}",
-        open_array_token.value as char, open_array_token.pos
-    );
-
+    /*
+       println!(
+           "Found Open Array Token: {} at {}",
+           open_array_token.value as char, open_array_token.pos
+       );
+    */
     loop {
         let value_start =
             skip_white_spaces_and_peek_expected_token(src, ExpectedJsonValueStart).await?;
