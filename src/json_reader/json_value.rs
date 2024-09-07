@@ -327,7 +327,21 @@ impl JsonValue {
             return Some(result);
         }
 
-        let result = std::str::from_utf8(slice[1..slice.len() - 1].as_ref()).unwrap();
+        if slice[0] != crate::consts::DOUBLE_QUOTE
+            || slice[slice.len() - 1] != crate::consts::DOUBLE_QUOTE
+        {
+            let result = std::str::from_utf8(slice[1..slice.len() - 1].as_ref()).unwrap();
+            return Some(result.into());
+        }
+
+        if slice[0] != crate::consts::SINGLE_QUOTE
+            || slice[slice.len() - 1] != crate::consts::SINGLE_QUOTE
+        {
+            let result = std::str::from_utf8(slice[1..slice.len() - 1].as_ref()).unwrap();
+            return Some(result.into());
+        }
+
+        let result = std::str::from_utf8(slice).unwrap();
 
         Some(result.into())
     }
