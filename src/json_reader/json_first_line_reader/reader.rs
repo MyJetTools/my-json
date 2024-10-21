@@ -34,10 +34,15 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
                 return Ok(true);
             }
         } else {
-            sync_reader::skip_white_spaces_and_get_expected_token(
+            let result = sync_reader::skip_white_spaces_and_get_expected_token(
                 &mut self.raw,
                 ExpectedOpenJsonObjectToken,
-            )?;
+            );
+
+            if let Err(err) = result {
+                let msg = err.into_string();
+                return Err(JsonParseError::CanNotFineStartOfTheJsonObject(msg));
+            }
             self.had_init = true;
         }
 

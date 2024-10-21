@@ -7,6 +7,15 @@ pub struct JsonKeyValue {
     pub value: JsonValue,
 }
 
+impl std::fmt::Debug for JsonKeyValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("JsonKeyValue")
+            .field("name", &self.name)
+            .field("value", &self.value)
+            .finish()
+    }
+}
+
 impl JsonKeyValue {
     pub fn new(key_start: usize, key_end: usize, value_start: usize, value_end: usize) -> Self {
         JsonKeyValue {

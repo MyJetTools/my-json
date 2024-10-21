@@ -229,8 +229,9 @@ pub fn skip_white_spaces(src: &mut impl ArrayOfBytesIterator) -> Result<NextValu
     }
 
     Err(JsonParseError::new(format!(
-        "Error skipping white spaces. Start {}. We reached the end of the payload",
-        start_pos
+        "Error skipping white spaces. Started skipping at position {}. We reached the end of the payload at {}",
+        start_pos,
+        src.get_pos()
     )))
 }
 

@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use super::json_value::AsJsonSlice;
 use super::JsonParseError;
 use super::{bytes_of_array_reader::*, JsonValue};
@@ -9,12 +11,27 @@ pub struct JsonArrayIterator<TArrayOfBytesIterator: ArrayOfBytesIterator> {
     initialized: bool,
 }
 
+impl Debug for JsonArrayIterator<SliceIterator<'_>> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("JsonArrayIterator")
+            .field("Position", &self.data.get_pos())
+            .field("initialized", &self.initialized)
+            .finish()
+    }
+}
+
 impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIterator<TArrayOfBytesIterator> {
-    pub fn new(mut data: TArrayOfBytesIterator) -> Self {
-        sync_reader::skip_white_spaces(&mut data).unwrap();
-        Self {
-            data,
-            initialized: false,
+    pub fn new(mut data: TArrayOfBytesIterator) -> Result<Self, JsonParseError> {
+        let result = sync_reader::skip_white_spaces(&mut data);
+
+        match result {
+            Ok(_) => Ok(Self {
+                data,
+                initialized: false,
+            }),
+            Err(result) => Err(JsonParseError::CanNotFineStartOfTheArrayObject(
+                result.into_string(),
+            )),
         }
     }
 
@@ -56,7 +73,11 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIterator<TArrayOfByte
         } else {
             let next_pos = match sync_reader::skip_white_spaces_and_get_next(&mut self.data) {
                 Ok(value) => value,
-                Err(err) => return Some(Err(err)),
+                Err(err) => {
+                    return Some(Err(JsonParseError::CanNotFineStartOfTheArrayObject(
+                        err.into_string(),
+                    )))
+                }
             };
 
             match next_pos.value {
@@ -154,15 +175,17 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIterator<TArrayOfByte
     }
 }
 
-impl<'s> Into<JsonArrayIterator<SliceIterator<'s>>> for &'s [u8] {
-    fn into(self) -> JsonArrayIterator<SliceIterator<'s>> {
+impl<'s> TryInto<JsonArrayIterator<SliceIterator<'s>>> for &'s [u8] {
+    type Error = JsonParseError;
+    fn try_into(self) -> Result<JsonArrayIterator<SliceIterator<'s>>, Self::Error> {
         let slice_iterator = SliceIterator::new(self);
         JsonArrayIterator::new(slice_iterator)
     }
 }
 
-impl<'s> Into<JsonArrayIterator<SliceIterator<'s>>> for &'s str {
-    fn into(self) -> JsonArrayIterator<SliceIterator<'s>> {
+impl<'s> TryInto<JsonArrayIterator<SliceIterator<'s>>> for &'s str {
+    type Error = JsonParseError;
+    fn try_into(self) -> Result<JsonArrayIterator<SliceIterator<'s>>, Self::Error> {
         let slice_iterator = SliceIterator::new(self.as_bytes());
         JsonArrayIterator::new(slice_iterator)
     }
@@ -191,7 +214,7 @@ mod tests {
 
         let slice_iterator = SliceIterator::from_str(json);
 
-        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
+        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
 
         while let Some(sub_json) = json_array_iterator.get_next() {
             let sub_json = sub_json.unwrap();
@@ -217,7 +240,7 @@ mod tests {
 
         let slice_iterator = SliceIterator::from_str(json);
 
-        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
+        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
 
         while let Some(sub_json) = json_array_iterator.get_next() {
             let sub_json = sub_json.unwrap();
@@ -241,7 +264,7 @@ mod tests {
         let mut i = 0;
 
         let slice_iterator = SliceIterator::from_str(json);
-        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
+        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
 
         while let Some(sub_json) = json_array_iterator.get_next() {
             let sub_json = sub_json.unwrap();
@@ -260,7 +283,7 @@ mod tests {
 
         let mut i = 0;
         let slice_iterator = SliceIterator::from_str(json);
-        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
+        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
 
         while let Some(_) = json_array_iterator.get_next() {
             i += 1;
@@ -274,7 +297,7 @@ mod tests {
         let json = r###"["chat message",123,{"name":"chat"}, true, null]"###;
 
         let slice_iterator = SliceIterator::from_str(json);
-        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
+        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
 
         let value = json_array_iterator.get_next().unwrap().unwrap();
         assert_eq!(
@@ -319,7 +342,7 @@ mod tests {
         let json = "[[19313.0,2.7731]]";
 
         let slice_iterator = SliceIterator::from_str(json);
-        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
+        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
 
         let next_value = json_array_iterator.get_next().unwrap().unwrap();
 
@@ -351,7 +374,7 @@ mod tests {
         .as_bytes();
 
         let slice_iterator = SliceIterator::new(src);
-        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
+        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
 
         let value = json_array_iterator.get_next().unwrap().unwrap();
 
@@ -397,7 +420,7 @@ mod tests {
         let src = std::fs::read_to_string("test.json").unwrap();
 
         let slice_iterator = SliceIterator::from_str(src.as_str());
-        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator);
+        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
 
         while let Some(itm) = json_array_iterator.get_next() {
             let itm = itm.unwrap();

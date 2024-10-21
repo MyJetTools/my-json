@@ -59,9 +59,8 @@ impl JsonValue {
 
         if crate::json_utils::is_array(slice) {
             let slice_iterator = SliceIterator::new(slice);
-            return Ok(UnwrappedValue::Array(JsonArrayIterator::new(
-                slice_iterator,
-            )));
+            let json_array_iterator = JsonArrayIterator::new(slice_iterator)?;
+            return Ok(UnwrappedValue::Array(json_array_iterator));
         }
 
         if crate::json_utils::is_object(slice) {
@@ -291,7 +290,7 @@ impl JsonValue {
 
         if crate::json_utils::is_array(slice) {
             let slice_iterator = SliceIterator::new(slice);
-            return Ok(JsonArrayIterator::new(slice_iterator));
+            return JsonArrayIterator::new(slice_iterator);
         }
 
         Err(JsonParseError::new(

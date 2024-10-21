@@ -20,9 +20,10 @@ impl JsonFieldName {
 
         match std::str::from_utf8(slice) {
             Ok(result) => Ok(result),
-            Err(err) => Err(JsonParseError {
-                msg: format!("Can not parse name: {:?}", err),
-            }),
+            Err(err) => Err(JsonParseError::new(format!(
+                "Can not parse name: {:?}",
+                err
+            ))),
         }
     }
 
@@ -36,9 +37,10 @@ impl JsonFieldName {
             return Ok(name);
         }
 
-        Err(JsonParseError {
-            msg: format!("Can not parse name: {}-{}", self.start, self.end),
-        })
+        Err(JsonParseError::new(format!(
+            "Can not parse name: {}-{}",
+            self.start, self.end
+        )))
     }
 
     pub fn as_unescaped_name<'s>(
@@ -51,8 +53,9 @@ impl JsonFieldName {
             return Ok(name);
         }
 
-        Err(JsonParseError {
-            msg: format!("Can not parse name: {}-{}", self.start, self.end),
-        })
+        Err(JsonParseError::new(format!(
+            "Can not parse name: {}-{}",
+            self.start, self.end
+        )))
     }
 }
