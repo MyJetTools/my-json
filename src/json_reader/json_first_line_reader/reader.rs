@@ -248,4 +248,33 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    pub fn read_with_value_as_exp() {
+        let json = r###"{
+            "": true,
+            "AD": 1E+18,
+            "CD": false,
+            "DK": false,
+            "HD": false,
+            "Note:": true,
+            "SI": false,
+            "UT": false,
+            "VÃ": false
+        }"###
+            .as_bytes();
+
+        let slice_iterator = SliceIterator::new(json);
+
+        let mut first_line_reader = JsonFirstLineReader::new(slice_iterator);
+
+        while let Some(sub_json) = first_line_reader.get_next() {
+            let sub_json = sub_json.unwrap();
+            println!(
+                "{}:{}",
+                sub_json.name.as_raw_str(&first_line_reader).unwrap(),
+                sub_json.value.as_raw_str(&first_line_reader).unwrap()
+            );
+        }
+    }
 }

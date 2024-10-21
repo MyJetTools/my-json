@@ -417,6 +417,10 @@ pub fn is_number(c: u8) -> bool {
         return true;
     }
 
+    if c == '+' as u8 {
+        return true;
+    }
+
     if c == '.' as u8 {
         return true;
     }
