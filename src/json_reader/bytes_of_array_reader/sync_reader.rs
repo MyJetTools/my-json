@@ -145,7 +145,7 @@ pub fn find_the_end_of_json_object_or_array(
     )));
 }
 
-pub fn find_the_end_of_json(src: &mut impl ArrayOfBytesIterator) -> Result<usize, JsonParseError> {
+pub fn find_the_end_of_json(src: &impl ArrayOfBytesIterator) -> Result<usize, JsonParseError> {
     skip_white_spaces_and_get_expected_token(src, ExpectedOpenJsonObjectToken)?;
     loop {
         //let start = src.get_pos();
@@ -178,9 +178,7 @@ pub fn find_the_end_of_json(src: &mut impl ArrayOfBytesIterator) -> Result<usize
     }
 }
 
-pub fn find_the_end_of_array(
-    src: &mut impl ArrayOfBytesIterator,
-) -> Result<NextValue, JsonParseError> {
+pub fn find_the_end_of_array(src: &impl ArrayOfBytesIterator) -> Result<NextValue, JsonParseError> {
     let _open_array_token = src.get_next().unwrap();
 
     /*
@@ -202,7 +200,7 @@ pub fn find_the_end_of_array(
     }
 }
 
-pub fn next_token_must_be(raw: &mut impl ArrayOfBytesIterator, token: u8) -> FoundResult {
+pub fn next_token_must_be(raw: &impl ArrayOfBytesIterator, token: u8) -> FoundResult {
     while let Some(next_value) = raw.get_next() {
         if is_space(next_value.value) {
             continue;
@@ -218,7 +216,7 @@ pub fn next_token_must_be(raw: &mut impl ArrayOfBytesIterator, token: u8) -> Fou
     return FoundResult::EndOfJson;
 }
 
-pub fn skip_white_spaces(src: &mut impl ArrayOfBytesIterator) -> Result<NextValue, JsonParseError> {
+pub fn skip_white_spaces(src: &impl ArrayOfBytesIterator) -> Result<NextValue, JsonParseError> {
     let start_pos = src.get_pos();
     while let Some(next_value) = src.peek_value() {
         if next_value.value > 32 {
@@ -236,7 +234,7 @@ pub fn skip_white_spaces(src: &mut impl ArrayOfBytesIterator) -> Result<NextValu
 }
 
 pub fn skip_white_spaces_and_get_next(
-    src: &mut impl ArrayOfBytesIterator,
+    src: &impl ArrayOfBytesIterator,
 ) -> Result<NextValue, JsonParseError> {
     let start_pos = src.get_pos();
     while let Some(next_value) = src.get_next() {

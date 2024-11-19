@@ -4,11 +4,11 @@ use super::json_value::AsJsonSlice;
 use super::JsonParseError;
 use super::{bytes_of_array_reader::*, JsonValue};
 
-use rust_extensions::array_of_bytes_iterator::*;
+use rust_extensions::{array_of_bytes_iterator::*, UnsafeValue};
 
 pub struct JsonArrayIterator<TArrayOfBytesIterator: ArrayOfBytesIterator> {
     data: TArrayOfBytesIterator,
-    initialized: bool,
+    initialized: UnsafeValue<bool>,
 }
 
 impl Debug for JsonArrayIterator<SliceIterator<'_>> {
@@ -27,7 +27,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIterator<TArrayOfByte
         match result {
             Ok(_) => Ok(Self {
                 data,
-                initialized: false,
+                initialized: UnsafeValue::new(false),
             }),
             Err(result) => Err(JsonParseError::CanNotFineStartOfTheArrayObject(
                 result.into_string(),
@@ -39,12 +39,12 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIterator<TArrayOfByte
         self.data.get_src_slice()
     }
 
-    fn init(&mut self) -> Result<(), JsonParseError> {
-        let result = sync_reader::next_token_must_be(&mut self.data, crate::consts::OPEN_ARRAY);
+    fn init(&self) -> Result<(), JsonParseError> {
+        let result = sync_reader::next_token_must_be(&self.data, crate::consts::OPEN_ARRAY);
 
         match result {
             FoundResult::Ok(_) => {
-                self.initialized = true;
+                self.initialized.set_value(true);
                 return Ok(());
             }
             FoundResult::EndOfJson => {
@@ -61,17 +61,17 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIterator<TArrayOfByte
         }
     }
 
-    pub fn get_next(&mut self) -> Option<Result<JsonValue, JsonParseError>> {
-        let start_value = if !self.initialized {
+    pub fn get_next(&self) -> Option<Result<JsonValue, JsonParseError>> {
+        let start_value = if !self.initialized.get_value() {
             match self.init() {
-                Ok(_) => match sync_reader::skip_white_spaces(&mut self.data) {
+                Ok(_) => match sync_reader::skip_white_spaces(&self.data) {
                     Ok(value) => value,
                     Err(err) => return Some(Err(err)),
                 },
                 Err(err) => return Some(Err(err)),
             }
         } else {
-            let next_pos = match sync_reader::skip_white_spaces_and_get_next(&mut self.data) {
+            let next_pos = match sync_reader::skip_white_spaces_and_get_next(&self.data) {
                 Ok(value) => value,
                 Err(err) => {
                     return Some(Err(JsonParseError::CanNotFineStartOfTheArrayObject(
@@ -84,7 +84,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIterator<TArrayOfByte
                 crate::consts::CLOSE_ARRAY => {
                     return None;
                 }
-                crate::consts::COMMA => match sync_reader::skip_white_spaces(&mut self.data) {
+                crate::consts::COMMA => match sync_reader::skip_white_spaces(&self.data) {
                     Ok(value) => value,
                     Err(err) => return Some(Err(err)),
                 },
@@ -102,62 +102,60 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIterator<TArrayOfByte
                 return None;
             }
             crate::consts::DOUBLE_QUOTE => {
-                match sync_reader::find_the_end_of_the_string(&mut self.data) {
+                match sync_reader::find_the_end_of_the_string(&self.data) {
                     Ok(_) => {}
                     Err(err) => return Some(Err(err)),
                 }
             }
 
-            crate::consts::OPEN_ARRAY => match sync_reader::find_the_end_of_array(&mut self.data) {
+            crate::consts::OPEN_ARRAY => match sync_reader::find_the_end_of_array(&self.data) {
                 Ok(_) => {}
                 Err(err) => return Some(Err(err)),
             },
 
-            crate::consts::OPEN_BRACKET => {
-                match sync_reader::find_the_end_of_json(&mut self.data) {
-                    Ok(_) => {}
-                    Err(err) => return Some(Err(err)),
-                }
-            }
+            crate::consts::OPEN_BRACKET => match sync_reader::find_the_end_of_json(&self.data) {
+                Ok(_) => {}
+                Err(err) => return Some(Err(err)),
+            },
             crate::consts::START_OF_NULL_UPPER_CASE => {
-                if let Err(err) = sync_reader::check_json_symbol(&mut self.data, "null") {
+                if let Err(err) = sync_reader::check_json_symbol(&self.data, "null") {
                     return Some(Err(err));
                 }
             }
 
             crate::consts::START_OF_NULL_LOWER_CASE => {
-                if let Err(err) = sync_reader::check_json_symbol(&mut self.data, "null") {
+                if let Err(err) = sync_reader::check_json_symbol(&self.data, "null") {
                     return Some(Err(err));
                 }
             }
 
             crate::consts::START_OF_TRUE_UPPER_CASE => {
-                if let Err(err) = sync_reader::check_json_symbol(&mut self.data, "true") {
+                if let Err(err) = sync_reader::check_json_symbol(&self.data, "true") {
                     return Some(Err(err));
                 }
             }
 
             crate::consts::START_OF_TRUE_LOWER_CASE => {
-                if let Err(err) = sync_reader::check_json_symbol(&mut self.data, "true") {
+                if let Err(err) = sync_reader::check_json_symbol(&self.data, "true") {
                     return Some(Err(err));
                 }
             }
 
             crate::consts::START_OF_FALSE_UPPER_CASE => {
-                if let Err(err) = sync_reader::check_json_symbol(&mut self.data, "false") {
+                if let Err(err) = sync_reader::check_json_symbol(&self.data, "false") {
                     return Some(Err(err));
                 }
             }
 
             crate::consts::START_OF_FALSE_LOWER_CASE => {
-                if let Err(err) = sync_reader::check_json_symbol(&mut self.data, "false") {
+                if let Err(err) = sync_reader::check_json_symbol(&self.data, "false") {
                     return Some(Err(err));
                 }
             }
 
             _ => {
                 if sync_reader::is_number(start_value.value) {
-                    match sync_reader::find_the_end_of_the_number(&mut self.data) {
+                    match sync_reader::find_the_end_of_the_number(&self.data) {
                         Ok(_) => {}
                         Err(err) => return Some(Err(err)),
                     }
@@ -214,7 +212,7 @@ mod tests {
 
         let slice_iterator = SliceIterator::from_str(json);
 
-        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
+        let json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
 
         while let Some(sub_json) = json_array_iterator.get_next() {
             let sub_json = sub_json.unwrap();
@@ -240,7 +238,7 @@ mod tests {
 
         let slice_iterator = SliceIterator::from_str(json);
 
-        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
+        let json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
 
         while let Some(sub_json) = json_array_iterator.get_next() {
             let sub_json = sub_json.unwrap();
@@ -264,7 +262,7 @@ mod tests {
         let mut i = 0;
 
         let slice_iterator = SliceIterator::from_str(json);
-        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
+        let json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
 
         while let Some(sub_json) = json_array_iterator.get_next() {
             let sub_json = sub_json.unwrap();
@@ -283,7 +281,7 @@ mod tests {
 
         let mut i = 0;
         let slice_iterator = SliceIterator::from_str(json);
-        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
+        let json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
 
         while let Some(_) = json_array_iterator.get_next() {
             i += 1;
@@ -297,7 +295,7 @@ mod tests {
         let json = r###"["chat message",123,{"name":"chat"}, true, null]"###;
 
         let slice_iterator = SliceIterator::from_str(json);
-        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
+        let json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
 
         let value = json_array_iterator.get_next().unwrap().unwrap();
         assert_eq!(
@@ -342,11 +340,11 @@ mod tests {
         let json = "[[19313.0,2.7731]]";
 
         let slice_iterator = SliceIterator::from_str(json);
-        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
+        let json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
 
         let next_value = json_array_iterator.get_next().unwrap().unwrap();
 
-        let mut sub_array = next_value.unwrap_as_array(&json_array_iterator).unwrap();
+        let sub_array = next_value.unwrap_as_array(&json_array_iterator).unwrap();
 
         let value = sub_array.get_next().unwrap().unwrap();
         assert_eq!(
@@ -374,7 +372,7 @@ mod tests {
         .as_bytes();
 
         let slice_iterator = SliceIterator::new(src);
-        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
+        let json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
 
         let value = json_array_iterator.get_next().unwrap().unwrap();
 
@@ -420,7 +418,7 @@ mod tests {
         let src = std::fs::read_to_string("test.json").unwrap();
 
         let slice_iterator = SliceIterator::from_str(src.as_str());
-        let mut json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
+        let json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
 
         while let Some(itm) = json_array_iterator.get_next() {
             let itm = itm.unwrap();

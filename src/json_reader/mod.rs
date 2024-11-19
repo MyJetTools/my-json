@@ -27,3 +27,5 @@ mod json_key_value_ref;
 pub use json_key_value_ref::*;
 mod json_key_value;
 pub use json_key_value::*;
+mod array_iterator_from_slice;
+pub use array_iterator_from_slice::*;
