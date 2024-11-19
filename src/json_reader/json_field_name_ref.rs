@@ -6,26 +6,27 @@ use super::JsonContentOffset;
 
 pub struct JsonFieldNameRef<'s> {
     pub data: JsonContentOffset,
-    field_name_slice: &'s [u8],
+    src_json: &'s [u8],
 }
 
 impl<'s> JsonFieldNameRef<'s> {
-    pub fn new(data: JsonContentOffset, field_name_slice: &'s [u8]) -> Self {
-        Self {
-            data,
-            field_name_slice,
-        }
+    pub fn new(data: JsonContentOffset, src_json: &'s [u8]) -> Self {
+        Self { data, src_json }
     }
     pub fn as_raw_str(&'s self) -> Result<&'s str, JsonParseError> {
-        self.data.as_raw_str(&self.field_name_slice)
+        self.data.as_raw_str(&self.src_json)
     }
 
     pub fn as_str(&'s self) -> Result<StrOrString<'s>, JsonParseError> {
-        self.data.as_str(&self.field_name_slice)
+        self.data.as_str(&self.src_json)
+    }
+
+    pub fn as_slice(&'s self) -> &[u8] {
+        &self.src_json[self.data.start..self.data.end]
     }
 
     pub fn as_unescaped_str(&'s self) -> Result<&'s str, JsonParseError> {
-        self.data.as_unescaped_str(&self.field_name_slice)
+        self.data.as_unescaped_str(&self.src_json)
     }
 }
 
