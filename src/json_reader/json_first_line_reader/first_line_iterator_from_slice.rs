@@ -29,11 +29,21 @@ impl<'s> JsonFirstLineIteratorFromSlice<'s> {
             Err(err) => Some(Err(err)),
         }
     }
+
+    pub fn str(&'s self) -> &'s str {
+        std::str::from_utf8(self.reader.as_slice()).unwrap()
+    }
 }
 
 impl<'s> Into<JsonFirstLineIteratorFromSlice<'s>> for JsonFirstLineReader<SliceIterator<'s>> {
     fn into(self) -> JsonFirstLineIteratorFromSlice<'s> {
         JsonFirstLineIteratorFromSlice { reader: self }
+    }
+}
+
+impl<'s> Into<JsonFirstLineIteratorFromSlice<'s>> for &'s str {
+    fn into(self) -> JsonFirstLineIteratorFromSlice<'s> {
+        JsonFirstLineIteratorFromSlice::new(self.as_bytes())
     }
 }
 
