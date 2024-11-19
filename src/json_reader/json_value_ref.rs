@@ -86,6 +86,10 @@ impl<'s> JsonValueRef<'s> {
         self.data.as_raw_str(&self.json_slice)
     }
 
+    pub fn as_slice(&'s self) -> &'s [u8] {
+        &self.json_slice[self.data.start..self.data.end]
+    }
+
     pub fn as_date_time(&'s self) -> Option<DateTimeAsMicroseconds> {
         self.data.as_date_time(&self.json_slice)
     }
