@@ -4,11 +4,11 @@ use crate::json_reader::{AsJsonSlice, JsonFieldNameRef, JsonParseError, JsonValu
 
 use super::JsonFirstLineReader;
 
-pub struct FirstLineReaderFromSlice<'s> {
+pub struct JsonFirstLineIteratorFromSlice<'s> {
     reader: JsonFirstLineReader<SliceIterator<'s>>,
 }
 
-impl<'s> FirstLineReaderFromSlice<'s> {
+impl<'s> JsonFirstLineIteratorFromSlice<'s> {
     pub fn new(slice: &'s [u8]) -> Self {
         let slice_iterator = SliceIterator::new(slice);
         let reader = JsonFirstLineReader::new(slice_iterator);
@@ -31,21 +31,21 @@ impl<'s> FirstLineReaderFromSlice<'s> {
     }
 }
 
-impl<'s> Into<FirstLineReaderFromSlice<'s>> for JsonFirstLineReader<SliceIterator<'s>> {
-    fn into(self) -> FirstLineReaderFromSlice<'s> {
-        FirstLineReaderFromSlice { reader: self }
+impl<'s> Into<JsonFirstLineIteratorFromSlice<'s>> for JsonFirstLineReader<SliceIterator<'s>> {
+    fn into(self) -> JsonFirstLineIteratorFromSlice<'s> {
+        JsonFirstLineIteratorFromSlice { reader: self }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::json_reader::FirstLineReaderFromSlice;
+    use crate::json_reader::JsonFirstLineIteratorFromSlice;
 
     #[test]
     fn test_basic_case() {
         let json = r#"{"key1": "value1", "key2": "value2", "object": { "key":"value" }}"#;
 
-        let reader = super::FirstLineReaderFromSlice::new(json.as_bytes());
+        let reader = super::JsonFirstLineIteratorFromSlice::new(json.as_bytes());
 
         let item = reader.get_next().unwrap().unwrap();
 
@@ -61,7 +61,7 @@ mod tests {
 
         assert_eq!(item.0.as_str().unwrap().as_str(), "object");
 
-        let value: FirstLineReaderFromSlice<'_> = item.1.unwrap_as_object().unwrap().into();
+        let value: JsonFirstLineIteratorFromSlice<'_> = item.1.unwrap_as_object().unwrap().into();
 
         let item = value.get_next().unwrap().unwrap();
 
