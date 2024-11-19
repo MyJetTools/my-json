@@ -1,6 +1,6 @@
 use crate::json_reader::json_value::AsJsonSlice;
 use crate::json_reader::{bytes_of_array_reader::*, JsonKeyValue};
-use rust_extensions::array_of_bytes_iterator::*;
+use rust_extensions::{array_of_bytes_iterator::*, UnsafeValue};
 
 use self::sync_reader::find_the_end_of_the_string;
 
@@ -8,14 +8,14 @@ use super::super::JsonParseError;
 
 pub struct JsonFirstLineReader<TArrayOfBytesIterator: ArrayOfBytesIterator> {
     raw: TArrayOfBytesIterator,
-    had_init: bool,
+    had_init: UnsafeValue<bool>,
 }
 
 impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBytesIterator> {
     pub fn new(raw: TArrayOfBytesIterator) -> Self {
         Self {
             raw,
-            had_init: false,
+            had_init: UnsafeValue::new(false),
         }
     }
 
@@ -23,10 +23,10 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
         self.raw.get_src_slice()
     }
 
-    fn init_if_requires(&mut self) -> Result<bool, JsonParseError> {
-        if self.had_init {
+    fn init_if_requires(&self) -> Result<bool, JsonParseError> {
+        if self.had_init.get_value() {
             let token = sync_reader::skip_white_spaces_and_get_expected_token(
-                &mut self.raw,
+                &self.raw,
                 ExpectedTokenJsonObjectSeparatorOrCloseBracket,
             )?;
 
@@ -35,7 +35,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
             }
         } else {
             let result = sync_reader::skip_white_spaces_and_get_expected_token(
-                &mut self.raw,
+                &self.raw,
                 ExpectedOpenJsonObjectToken,
             );
 
@@ -43,13 +43,13 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
                 let msg = err.into_string();
                 return Err(JsonParseError::CanNotFineStartOfTheJsonObject(msg));
             }
-            self.had_init = true;
+            self.had_init.set_value(true);
         }
 
         Ok(false)
     }
 
-    pub fn get_next(&mut self) -> Option<Result<JsonKeyValue, JsonParseError>> {
+    pub fn get_next(&self) -> Option<Result<JsonKeyValue, JsonParseError>> {
         match self.init_if_requires() {
             Ok(end_of_object) => {
                 if end_of_object {
@@ -61,20 +61,20 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
         }
 
         let key_start = match sync_reader::skip_white_spaces_and_peek_expected_token(
-            &mut self.raw,
+            &self.raw,
             ExpectedJsonObjectKeyStart,
         ) {
             Ok(next_value) => next_value.pos,
             Err(err) => return Some(Err(err)),
         };
 
-        let key_end = match find_the_end_of_the_string(&mut self.raw) {
+        let key_end = match find_the_end_of_the_string(&self.raw) {
             Ok(next_value) => next_value.pos,
             Err(err) => return Some(Err(err)),
         };
 
         match sync_reader::skip_white_spaces_and_get_expected_token(
-            &mut self.raw,
+            &self.raw,
             ExpectedJsonObjectKeyValueSeparator,
         ) {
             Ok(next_value) => next_value,
@@ -82,7 +82,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
         };
 
         let value_start = match sync_reader::skip_white_spaces_and_peek_expected_token(
-            &mut self.raw,
+            &self.raw,
             ExpectedJsonValueStart,
         ) {
             Ok(next_value) => next_value,
@@ -90,7 +90,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
         };
 
         let value_end =
-            match sync_reader::find_the_end_of_the_object_value(&mut self.raw, value_start.value) {
+            match sync_reader::find_the_end_of_the_object_value(&self.raw, value_start.value) {
                 Ok(pos) => pos,
                 Err(err) => return Some(Err(err)),
             };
@@ -137,7 +137,7 @@ mod tests {
         let src_data = "{\"name1\":\"123\", \"name2\":true,       \"name3\":null, \"name4\":0.12, \"name5\":{\"a\":\"b\"}}".as_bytes();
 
         let slice_iterator = SliceIterator::new(src_data);
-        let mut parser = JsonFirstLineReader::new(slice_iterator);
+        let parser = JsonFirstLineReader::new(slice_iterator);
 
         let item = parser.get_next().unwrap().unwrap();
 
@@ -175,7 +175,7 @@ mod tests {
 
         let slice_iterator = SliceIterator::new(fist_line);
 
-        let mut parser = JsonFirstLineReader::new(slice_iterator);
+        let parser = JsonFirstLineReader::new(slice_iterator);
 
         let item = parser.get_next().unwrap().unwrap();
 
@@ -214,7 +214,7 @@ mod tests {
 
         let slice_iterator = SliceIterator::new(json);
 
-        let mut first_line_reader = JsonFirstLineReader::new(slice_iterator);
+        let first_line_reader = JsonFirstLineReader::new(slice_iterator);
 
         while let Some(sub_json) = first_line_reader.get_next() {
             let sub_json = sub_json.unwrap();
@@ -242,7 +242,7 @@ mod tests {
 
         let slice_iterator = SliceIterator::new(json);
 
-        let mut first_line_reader = JsonFirstLineReader::new(slice_iterator);
+        let first_line_reader = JsonFirstLineReader::new(slice_iterator);
 
         while let Some(sub_json) = first_line_reader.get_next() {
             let sub_json = sub_json.unwrap();
@@ -271,7 +271,7 @@ mod tests {
 
         let slice_iterator = SliceIterator::new(json);
 
-        let mut first_line_reader = JsonFirstLineReader::new(slice_iterator);
+        let first_line_reader = JsonFirstLineReader::new(slice_iterator);
 
         while let Some(sub_json) = first_line_reader.get_next() {
             let sub_json = sub_json.unwrap();

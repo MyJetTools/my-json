@@ -40,7 +40,7 @@ mod tests {
         let src_data = "{\"name1\":\"123\", \"name2\":true,       \"name3\":null, \"name4\":0.12, \"name5\":{\"a\":\"b\"}}".as_bytes();
 
         let slice_iterator = SliceIterator::new(src_data);
-        let mut parser = JsonFirstLineReader::new(slice_iterator);
+        let parser = JsonFirstLineReader::new(slice_iterator);
 
         let item = parser.get_next().unwrap().unwrap().as_ref(&parser);
 
@@ -78,7 +78,7 @@ mod tests {
 
         let slice_iterator = SliceIterator::new(fist_line);
 
-        let mut parser = JsonFirstLineReader::new(slice_iterator);
+        let parser = JsonFirstLineReader::new(slice_iterator);
 
         let item = parser.get_next().unwrap().unwrap().as_ref(&parser);
 
@@ -117,7 +117,7 @@ mod tests {
 
         let slice_iterator = SliceIterator::new(json);
 
-        let mut first_line_reader = JsonFirstLineReader::new(slice_iterator);
+        let first_line_reader = JsonFirstLineReader::new(slice_iterator);
 
         while let Some(sub_json) = first_line_reader.get_next() {
             let sub_json = sub_json.unwrap().as_ref(&first_line_reader);
@@ -142,7 +142,7 @@ mod tests {
 
         let slice_iterator = SliceIterator::new(json);
 
-        let mut first_line_reader = JsonFirstLineReader::new(slice_iterator);
+        let first_line_reader = JsonFirstLineReader::new(slice_iterator);
 
         while let Some(sub_json) = first_line_reader.get_next() {
             let sub_json = sub_json.unwrap().as_ref(&first_line_reader);

@@ -5,7 +5,7 @@ use crate::json_reader::JsonParseError;
 use super::*;
 
 pub fn find_the_end_of_the_object_value(
-    src: &mut impl ArrayOfBytesIterator,
+    src: &impl ArrayOfBytesIterator,
     value_start: u8,
 ) -> Result<usize, JsonParseError> {
     if is_number(value_start) {
@@ -62,7 +62,7 @@ pub fn find_the_end_of_the_object_value(
 }
 
 pub fn find_the_end_of_json_object_or_array(
-    src: &mut impl ArrayOfBytesIterator,
+    src: &impl ArrayOfBytesIterator,
 ) -> Result<NextValue, JsonParseError> {
     let start_pos = src.get_pos();
 
@@ -252,7 +252,7 @@ pub fn skip_white_spaces_and_get_next(
 }
 
 pub fn skip_white_spaces_and_peek_expected_token(
-    src: &mut impl ArrayOfBytesIterator,
+    src: &impl ArrayOfBytesIterator,
     expected_token: impl ExpectedToken,
 ) -> Result<NextValue, JsonParseError> {
     let start_pos = src.get_pos();
@@ -283,7 +283,7 @@ pub fn skip_white_spaces_and_peek_expected_token(
 }
 
 pub fn skip_white_spaces_and_get_expected_token(
-    src: &mut impl ArrayOfBytesIterator,
+    src: &impl ArrayOfBytesIterator,
     expected_token: impl ExpectedToken,
 ) -> Result<NextValue, JsonParseError> {
     let start_pos = src.get_pos();
@@ -312,7 +312,7 @@ pub fn skip_white_spaces_and_get_expected_token(
 }
 
 pub fn find_the_end_of_the_string(
-    src: &mut impl ArrayOfBytesIterator,
+    src: &impl ArrayOfBytesIterator,
 ) -> Result<NextValue, JsonParseError> {
     let start_pos = src.get_pos();
 
@@ -353,7 +353,7 @@ pub fn find_the_end_of_the_string(
 }
 
 pub fn skip_to_the_end_of_the_string(
-    src: &mut impl ArrayOfBytesIterator,
+    src: &impl ArrayOfBytesIterator,
 ) -> Result<NextValue, JsonParseError> {
     let start_pos = src.get_pos();
 
@@ -392,7 +392,7 @@ pub fn skip_to_the_end_of_the_string(
 }
 
 pub fn find_the_end_of_the_number(
-    src: &mut impl ArrayOfBytesIterator,
+    src: &impl ArrayOfBytesIterator,
 ) -> Result<NextValue, JsonParseError> {
     let pos = src.get_pos();
     while let Some(next_value) = src.peek_value() {
@@ -442,7 +442,7 @@ pub fn is_space(c: u8) -> bool {
 }
 
 pub fn check_json_symbol(
-    src: &mut impl ArrayOfBytesIterator,
+    src: &impl ArrayOfBytesIterator,
     symbol: &str,
 ) -> Result<(), JsonParseError> {
     let pos = src.get_pos();

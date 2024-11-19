@@ -378,7 +378,7 @@ mod tests {
 
         let value = json_array_iterator.get_next().unwrap().unwrap();
 
-        let mut object = value.unwrap_as_object(&json_array_iterator).unwrap();
+        let object = value.unwrap_as_object(&json_array_iterator).unwrap();
 
         let param = object.get_next().unwrap().unwrap();
         assert_eq!("Id", param.name.as_str(&object).unwrap().as_str());

@@ -8,7 +8,7 @@ fn test_empty_string_as_json() {
 
     let slice_iterator = SliceIterator::new(json.as_bytes());
 
-    let mut first_line_reader = JsonFirstLineReader::new(slice_iterator);
+    let first_line_reader = JsonFirstLineReader::new(slice_iterator);
 
     while let Some(item) = first_line_reader.get_next() {
         println!("{:?}", item);
