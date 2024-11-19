@@ -30,7 +30,7 @@ impl<'s> JsonFirstLineIteratorFromSlice<'s> {
         }
     }
 
-    pub fn str(&'s self) -> &'s str {
+    pub fn as_str(&'s self) -> &'s str {
         std::str::from_utf8(self.reader.as_slice()).unwrap()
     }
 }
