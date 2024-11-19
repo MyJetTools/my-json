@@ -43,7 +43,7 @@ impl JsonFieldName {
         )))
     }
 
-    pub fn as_unescaped_name<'s>(
+    pub fn as_unescaped_str<'s>(
         &self,
         json: &'s impl AsJsonSlice,
     ) -> Result<&'s str, JsonParseError> {

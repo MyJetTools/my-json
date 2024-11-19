@@ -24,8 +24,8 @@ impl<'s> JsonFieldNameRef<'s> {
         self.src.as_str(&self.field_name_slice)
     }
 
-    pub fn as_unescaped_name(&'s self) -> Result<&'s str, JsonParseError> {
-        self.src.as_unescaped_name(&self.field_name_slice)
+    pub fn as_unescaped_str(&'s self) -> Result<&'s str, JsonParseError> {
+        self.src.as_unescaped_str(&self.field_name_slice)
     }
 }
 
