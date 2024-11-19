@@ -14,18 +14,15 @@ impl<'s> AsJsonSlice for &'s [u8] {
     }
 }
 
+impl<'s> AsJsonSlice for &'s str {
+    fn as_slice(&self) -> &[u8] {
+        self.as_bytes()
+    }
+}
 #[derive(Clone, Debug)]
 pub struct JsonValue {
     pub start: usize,
     pub end: usize,
-    /*
-    String(&'s str),
-    Number(&'s str),
-    Double(&'s str),
-    Boolean(bool),
-    Array(&'s [u8]),
-    Object(&'s [u8]),
-     */
 }
 
 impl JsonValue {
