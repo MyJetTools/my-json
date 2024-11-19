@@ -15,6 +15,10 @@ impl<'s> JsonFirstLineIterator<'s> {
         Self { inner: reader }
     }
 
+    pub fn as_slice(&self) -> &[u8] {
+        self.inner.as_slice()
+    }
+
     pub fn get_next(
         &'s self,
     ) -> Option<Result<(JsonFieldNameRef<'s>, JsonValueRef<'s>), JsonParseError>> {
