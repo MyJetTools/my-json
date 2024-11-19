@@ -5,27 +5,27 @@ use crate::json_reader::JsonParseError;
 use super::JsonFieldName;
 
 pub struct JsonFieldNameRef<'s> {
-    src: JsonFieldName,
+    pub data: JsonFieldName,
     field_name_slice: &'s [u8],
 }
 
 impl<'s> JsonFieldNameRef<'s> {
-    pub fn new(src: JsonFieldName, field_name_slice: &'s [u8]) -> Self {
+    pub fn new(data: JsonFieldName, field_name_slice: &'s [u8]) -> Self {
         Self {
-            src,
+            data,
             field_name_slice,
         }
     }
     pub fn as_raw_str(&'s self) -> Result<&'s str, JsonParseError> {
-        self.src.as_raw_str(&self.field_name_slice)
+        self.data.as_raw_str(&self.field_name_slice)
     }
 
     pub fn as_str(&'s self) -> Result<StrOrString<'s>, JsonParseError> {
-        self.src.as_str(&self.field_name_slice)
+        self.data.as_str(&self.field_name_slice)
     }
 
     pub fn as_unescaped_str(&'s self) -> Result<&'s str, JsonParseError> {
-        self.src.as_unescaped_str(&self.field_name_slice)
+        self.data.as_unescaped_str(&self.field_name_slice)
     }
 }
 
