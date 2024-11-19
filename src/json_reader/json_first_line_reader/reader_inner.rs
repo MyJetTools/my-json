@@ -6,7 +6,7 @@ use self::sync_reader::find_the_end_of_the_string;
 
 use super::super::JsonParseError;
 
-pub(crate) struct JsonFirstLineReaderInner<TArrayOfBytesIterator: ArrayOfBytesIterator> {
+pub struct JsonFirstLineReaderInner<TArrayOfBytesIterator: ArrayOfBytesIterator> {
     raw: TArrayOfBytesIterator,
     had_init: UnsafeValue<bool>,
 }

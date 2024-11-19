@@ -6,7 +6,7 @@ use super::{bytes_of_array_reader::*, JsonValue};
 
 use rust_extensions::{array_of_bytes_iterator::*, UnsafeValue};
 
-pub(crate) struct JsonArrayIteratorInner<TArrayOfBytesIterator: ArrayOfBytesIterator> {
+pub struct JsonArrayIteratorInner<TArrayOfBytesIterator: ArrayOfBytesIterator> {
     data: TArrayOfBytesIterator,
     initialized: UnsafeValue<bool>,
 }
