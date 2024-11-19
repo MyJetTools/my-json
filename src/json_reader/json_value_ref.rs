@@ -1,10 +1,7 @@
-use rust_extensions::{
-    array_of_bytes_iterator::SliceIterator, date_time::DateTimeAsMicroseconds, StrOrString,
-};
+use rust_extensions::{date_time::DateTimeAsMicroseconds, StrOrString};
 
 use super::{
-    array_iterator::JsonArrayIterator, json_value::UnwrappedValue, JsonFirstLineReader,
-    JsonParseError, JsonValue,
+    json_value::UnwrappedValue, JsonArrayIterator, JsonFirstLineIterator, JsonParseError, JsonValue,
 };
 
 #[derive(Clone, Debug)]
@@ -34,9 +31,7 @@ impl<'s> JsonValueRef<'s> {
         self.src.is_object(&self.json_slice)
     }
 
-    pub fn unwrap_as_object(
-        &'s self,
-    ) -> Result<JsonFirstLineReader<SliceIterator<'s>>, JsonParseError> {
+    pub fn unwrap_as_object(&'s self) -> Result<JsonFirstLineIterator<'s>, JsonParseError> {
         self.src.unwrap_as_object(&self.json_slice)
     }
 
@@ -72,9 +67,7 @@ impl<'s> JsonValueRef<'s> {
         self.src.as_bytes(&self.json_slice)
     }
 
-    pub fn unwrap_as_array(
-        &'s self,
-    ) -> Result<JsonArrayIterator<SliceIterator<'s>>, JsonParseError> {
+    pub fn unwrap_as_array(&'s self) -> Result<JsonArrayIterator<'s>, JsonParseError> {
         self.src.unwrap_as_array(&self.json_slice)
     }
 

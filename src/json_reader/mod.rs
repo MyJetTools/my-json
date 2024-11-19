@@ -1,4 +1,4 @@
-pub mod array_iterator;
+pub mod array_iterator_inner;
 
 mod json_first_line_reader;
 mod json_parse_error;
@@ -27,5 +27,5 @@ mod json_key_value_ref;
 pub use json_key_value_ref::*;
 mod json_key_value;
 pub use json_key_value::*;
-mod array_iterator_from_slice;
-pub use array_iterator_from_slice::*;
+mod array_iterator;
+pub use array_iterator::*;

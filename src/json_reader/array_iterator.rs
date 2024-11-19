@@ -1,430 +1,114 @@
-use std::fmt::Debug;
+use rust_extensions::array_of_bytes_iterator::SliceIterator;
 
-use super::json_value::AsJsonSlice;
-use super::JsonParseError;
-use super::{bytes_of_array_reader::*, JsonValue};
+use super::{array_iterator_inner::JsonArrayIteratorInner, JsonParseError, JsonValueRef};
 
-use rust_extensions::{array_of_bytes_iterator::*, UnsafeValue};
-
-pub struct JsonArrayIterator<TArrayOfBytesIterator: ArrayOfBytesIterator> {
-    data: TArrayOfBytesIterator,
-    initialized: UnsafeValue<bool>,
+pub struct JsonArrayIterator<'s> {
+    iterator: JsonArrayIteratorInner<SliceIterator<'s>>,
 }
 
-impl Debug for JsonArrayIterator<SliceIterator<'_>> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("JsonArrayIterator")
-            .field("Position", &self.data.get_pos())
-            .field("initialized", &self.initialized)
-            .finish()
+impl<'s> JsonArrayIterator<'s> {
+    pub fn new(slice: &'s [u8]) -> Result<Self, JsonParseError> {
+        let slice = JsonArrayIteratorInner::new(SliceIterator::new(slice))?;
+        let result = Self { iterator: slice };
+
+        Ok(result)
     }
-}
 
-impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIterator<TArrayOfBytesIterator> {
-    pub fn new(mut data: TArrayOfBytesIterator) -> Result<Self, JsonParseError> {
-        let result = sync_reader::skip_white_spaces(&mut data);
+    pub fn get_next(&self) -> Option<Result<JsonValueRef, JsonParseError>> {
+        let result = self.iterator.get_next()?;
 
         match result {
-            Ok(_) => Ok(Self {
-                data,
-                initialized: UnsafeValue::new(false),
-            }),
-            Err(result) => Err(JsonParseError::CanNotFineStartOfTheArrayObject(
-                result.into_string(),
-            )),
+            Ok(value) => {
+                let result = JsonValueRef::new(value, self.iterator.get_src_slice());
+                Some(Ok(result))
+            }
+            Err(err) => Some(Err(err)),
         }
     }
-
-    pub fn get_src_slice(&self) -> &[u8] {
-        self.data.get_src_slice()
-    }
-
-    fn init(&self) -> Result<(), JsonParseError> {
-        let result = sync_reader::next_token_must_be(&self.data, crate::consts::OPEN_ARRAY);
-
-        match result {
-            FoundResult::Ok(_) => {
-                self.initialized.set_value(true);
-                return Ok(());
-            }
-            FoundResult::EndOfJson => {
-                return Err(JsonParseError::new(format!(
-                    "Can not find start of the array token"
-                )));
-            }
-            FoundResult::InvalidTokenFound(value) => {
-                return Err(JsonParseError::new(format!(
-                    "We were looking start of array token but found '{}' at position {}",
-                    value.value as char, value.pos
-                )));
-            }
-        }
-    }
-
-    pub fn get_next(&self) -> Option<Result<JsonValue, JsonParseError>> {
-        let start_value = if !self.initialized.get_value() {
-            match self.init() {
-                Ok(_) => match sync_reader::skip_white_spaces(&self.data) {
-                    Ok(value) => value,
-                    Err(err) => return Some(Err(err)),
-                },
-                Err(err) => return Some(Err(err)),
-            }
-        } else {
-            let next_pos = match sync_reader::skip_white_spaces_and_get_next(&self.data) {
-                Ok(value) => value,
-                Err(err) => {
-                    return Some(Err(JsonParseError::CanNotFineStartOfTheArrayObject(
-                        err.into_string(),
-                    )))
-                }
-            };
-
-            match next_pos.value {
-                crate::consts::CLOSE_ARRAY => {
-                    return None;
-                }
-                crate::consts::COMMA => match sync_reader::skip_white_spaces(&self.data) {
-                    Ok(value) => value,
-                    Err(err) => return Some(Err(err)),
-                },
-                _ => {
-                    return Some(Err(JsonParseError::new(format!(
-                        "Invalid token found ['{}'] at position {}",
-                        next_pos.value as char, next_pos.pos
-                    ))));
-                }
-            }
-        };
-
-        match start_value.value {
-            crate::consts::CLOSE_ARRAY => {
-                return None;
-            }
-            crate::consts::DOUBLE_QUOTE => {
-                match sync_reader::find_the_end_of_the_string(&self.data) {
-                    Ok(_) => {}
-                    Err(err) => return Some(Err(err)),
-                }
-            }
-
-            crate::consts::OPEN_ARRAY => match sync_reader::find_the_end_of_array(&self.data) {
-                Ok(_) => {}
-                Err(err) => return Some(Err(err)),
-            },
-
-            crate::consts::OPEN_BRACKET => match sync_reader::find_the_end_of_json(&self.data) {
-                Ok(_) => {}
-                Err(err) => return Some(Err(err)),
-            },
-            crate::consts::START_OF_NULL_UPPER_CASE => {
-                if let Err(err) = sync_reader::check_json_symbol(&self.data, "null") {
-                    return Some(Err(err));
-                }
-            }
-
-            crate::consts::START_OF_NULL_LOWER_CASE => {
-                if let Err(err) = sync_reader::check_json_symbol(&self.data, "null") {
-                    return Some(Err(err));
-                }
-            }
-
-            crate::consts::START_OF_TRUE_UPPER_CASE => {
-                if let Err(err) = sync_reader::check_json_symbol(&self.data, "true") {
-                    return Some(Err(err));
-                }
-            }
-
-            crate::consts::START_OF_TRUE_LOWER_CASE => {
-                if let Err(err) = sync_reader::check_json_symbol(&self.data, "true") {
-                    return Some(Err(err));
-                }
-            }
-
-            crate::consts::START_OF_FALSE_UPPER_CASE => {
-                if let Err(err) = sync_reader::check_json_symbol(&self.data, "false") {
-                    return Some(Err(err));
-                }
-            }
-
-            crate::consts::START_OF_FALSE_LOWER_CASE => {
-                if let Err(err) = sync_reader::check_json_symbol(&self.data, "false") {
-                    return Some(Err(err));
-                }
-            }
-
-            _ => {
-                if sync_reader::is_number(start_value.value) {
-                    match sync_reader::find_the_end_of_the_number(&self.data) {
-                        Ok(_) => {}
-                        Err(err) => return Some(Err(err)),
-                    }
-                } else {
-                    return Some(Err(JsonParseError::new(format!(
-                        "Invalid token found '{}' at position {}",
-                        start_value.value as char, start_value.pos
-                    ))));
-                }
-            }
-        };
-
-        //let result = self.data.get_slice_to_current_pos(start_value.pos);
-        return Some(Ok(JsonValue::new(start_value.pos, self.data.get_pos())));
-    }
 }
 
-impl<'s> TryInto<JsonArrayIterator<SliceIterator<'s>>> for &'s [u8] {
-    type Error = JsonParseError;
-    fn try_into(self) -> Result<JsonArrayIterator<SliceIterator<'s>>, Self::Error> {
-        let slice_iterator = SliceIterator::new(self);
-        JsonArrayIterator::new(slice_iterator)
-    }
-}
-
-impl<'s> TryInto<JsonArrayIterator<SliceIterator<'s>>> for &'s str {
-    type Error = JsonParseError;
-    fn try_into(self) -> Result<JsonArrayIterator<SliceIterator<'s>>, Self::Error> {
-        let slice_iterator = SliceIterator::new(self.as_bytes());
-        JsonArrayIterator::new(slice_iterator)
-    }
-}
-
-impl<TArrayOfBytesIterator: ArrayOfBytesIterator> AsJsonSlice
-    for JsonArrayIterator<TArrayOfBytesIterator>
-{
-    fn as_slice(&self) -> &[u8] {
-        self.data.get_src_slice()
+impl<'s> Into<JsonArrayIterator<'s>> for &'s [u8] {
+    fn into(self) -> JsonArrayIterator<'s> {
+        JsonArrayIterator::new(self).unwrap()
     }
 }
 
 #[cfg(test)]
 mod tests {
 
-    use super::*;
-
     #[test]
-    pub fn test_basic_json_array_split() {
-        let json = r###"[{"id":1},{"id":2},{"id":3}]"###;
+    fn test_number() {
+        let src = "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]";
 
-        println!("{}", json);
+        let iter: super::JsonArrayIterator = src.as_bytes().into();
 
-        let mut i = 0;
+        let item = iter.get_next().unwrap().unwrap();
 
-        let slice_iterator = SliceIterator::from_str(json);
+        assert_eq!(item.unwrap_as_number().unwrap().unwrap(), 1);
+        let item = iter.get_next().unwrap().unwrap();
+        assert_eq!(item.unwrap_as_number().unwrap().unwrap(), 2);
 
-        let json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
+        let item = iter.get_next().unwrap().unwrap();
+        assert_eq!(item.unwrap_as_number().unwrap().unwrap(), 3);
 
-        while let Some(sub_json) = json_array_iterator.get_next() {
-            let sub_json = sub_json.unwrap();
-            i += 1;
-            println!("{}", i);
+        let item = iter.get_next().unwrap().unwrap();
+        assert_eq!(item.unwrap_as_number().unwrap().unwrap(), 4);
 
-            assert_eq!(
-                format!("{{\"id\":{}}}", i),
-                sub_json.as_str(&json_array_iterator).unwrap().as_str()
-            );
+        let item = iter.get_next().unwrap().unwrap();
+        assert_eq!(item.unwrap_as_number().unwrap().unwrap(), 5);
 
-            assert!(sub_json.is_object(&json_array_iterator));
-        }
+        let item = iter.get_next().unwrap().unwrap();
+        assert_eq!(item.unwrap_as_number().unwrap().unwrap(), 6);
+
+        let item = iter.get_next().unwrap().unwrap();
+        assert_eq!(item.unwrap_as_number().unwrap().unwrap(), 7);
+
+        let item = iter.get_next().unwrap().unwrap();
+        assert_eq!(item.unwrap_as_number().unwrap().unwrap(), 8);
+
+        let item = iter.get_next().unwrap().unwrap();
+        assert_eq!(item.unwrap_as_number().unwrap().unwrap(), 9);
+
+        let item = iter.get_next().unwrap().unwrap();
+        assert_eq!(item.unwrap_as_number().unwrap().unwrap(), 10);
+
+        let item = iter.get_next();
+        assert!(item.is_none());
     }
 
     #[test]
-    pub fn test_basic_json_array_split_case_2() {
-        let json = r###"[{"id":1} , {"id":2} , {"id":3}]"###;
+    fn test_objects() {
+        let src =
+            r#"[{"PartitionKey":"pk1", "RowKey":"rk1"}, {"PartitionKey":"pk2", "RowKey":"rk2"}]"#;
 
-        println!("{}", json);
+        let array_iter: super::JsonArrayIterator = src.as_bytes().into();
 
-        let mut i = 0;
+        let next_element = array_iter.get_next().unwrap().unwrap();
 
-        let slice_iterator = SliceIterator::from_str(json);
+        let obj = next_element.unwrap_as_object().unwrap();
 
-        let json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
+        let (name, value) = obj.get_next().unwrap().unwrap();
 
-        while let Some(sub_json) = json_array_iterator.get_next() {
-            let sub_json = sub_json.unwrap();
-            i += 1;
+        assert_eq!(name.as_str().unwrap().as_str(), "PartitionKey");
+        assert_eq!(value.as_str().unwrap().as_str(), "pk1");
 
-            assert_eq!(
-                format!("{{\"id\":{}}}", i),
-                sub_json.as_str(&json_array_iterator).unwrap().as_str()
-            );
+        let (name, value) = obj.get_next().unwrap().unwrap();
+        assert_eq!(name.as_str().unwrap().as_str(), "RowKey");
+        assert_eq!(value.as_str().unwrap().as_str(), "rk1");
 
-            assert!(sub_json.is_object(&json_array_iterator));
-        }
-    }
+        let next_element = array_iter.get_next().unwrap().unwrap();
 
-    #[test]
-    pub fn test_basic_json_array_split_case_3() {
-        let json = r###"[{"id":1}, {"id":2} ,{"id":3}]"###;
+        let obj = next_element.unwrap_as_object().unwrap();
 
-        println!("{}", json);
+        let (name, value) = obj.get_next().unwrap().unwrap();
 
-        let mut i = 0;
+        assert_eq!(name.as_str().unwrap().as_str(), "PartitionKey");
+        assert_eq!(value.as_str().unwrap().as_str(), "pk2");
 
-        let slice_iterator = SliceIterator::from_str(json);
-        let json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
+        let (name, value) = obj.get_next().unwrap().unwrap();
+        assert_eq!(name.as_str().unwrap().as_str(), "RowKey");
+        assert_eq!(value.as_str().unwrap().as_str(), "rk2");
 
-        while let Some(sub_json) = json_array_iterator.get_next() {
-            let sub_json = sub_json.unwrap();
-            i += 1;
-
-            assert_eq!(
-                format!("{{\"id\":{}}}", i),
-                sub_json.as_str(&json_array_iterator).unwrap().as_str()
-            );
-        }
-    }
-
-    #[test]
-    pub fn parse_empty_array() {
-        let json = r###"[]"###;
-
-        let mut i = 0;
-        let slice_iterator = SliceIterator::from_str(json);
-        let json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
-
-        while let Some(_) = json_array_iterator.get_next() {
-            i += 1;
-        }
-
-        assert_eq!(0, i);
-    }
-
-    #[test]
-    pub fn parse_array_with_different_objects() {
-        let json = r###"["chat message",123,{"name":"chat"}, true, null]"###;
-
-        let slice_iterator = SliceIterator::from_str(json);
-        let json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
-
-        let value = json_array_iterator.get_next().unwrap().unwrap();
-        assert_eq!(
-            "\"chat message\"",
-            value.as_raw_str(&json_array_iterator).unwrap()
-        );
-        assert_eq!(
-            "chat message",
-            value.as_str(&json_array_iterator).unwrap().as_str()
-        );
-        assert!(value.is_string(&json_array_iterator));
-
-        let value = json_array_iterator.get_next().unwrap().unwrap();
-        assert_eq!(
-            123,
-            value
-                .unwrap_as_number(&json_array_iterator)
-                .unwrap()
-                .unwrap()
-        );
-
-        let value = json_array_iterator.get_next().unwrap().unwrap();
-        assert!(value.is_object(&json_array_iterator));
-        assert_eq!(
-            "{\"name\":\"chat\"}",
-            value.as_str(&json_array_iterator).unwrap().as_str()
-        );
-
-        let value = json_array_iterator.get_next().unwrap().unwrap();
-        assert!(value.is_bool(&json_array_iterator));
-        assert_eq!(true, value.unwrap_as_bool(&json_array_iterator).unwrap());
-
-        let value = json_array_iterator.get_next().unwrap().unwrap();
-        assert!(value.is_null(&json_array_iterator));
-
-        let value = json_array_iterator.get_next();
-        assert!(value.is_none());
-    }
-
-    #[test]
-    pub fn parse_array_inside_array() {
-        let json = "[[19313.0,2.7731]]";
-
-        let slice_iterator = SliceIterator::from_str(json);
-        let json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
-
-        let next_value = json_array_iterator.get_next().unwrap().unwrap();
-
-        let sub_array = next_value.unwrap_as_array(&json_array_iterator).unwrap();
-
-        let value = sub_array.get_next().unwrap().unwrap();
-        assert_eq!(
-            19313.0,
-            value.unwrap_as_double(&sub_array).unwrap().unwrap()
-        );
-
-        let value = sub_array.get_next().unwrap().unwrap();
-        assert_eq!(2.7731, value.unwrap_as_double(&sub_array).unwrap().unwrap());
-    }
-
-    #[test]
-    fn test_from_real_world() {
-        let src = r#"[
-            {
-              "Id": "YourFin",
-              "BaseDomain": "your_fin.tech",
-              "DomainsPool": [
-                "your_fin.tech"
-              ],
-              "CakeRegistrationId": "9",
-              "TimeStamp": "2022-11-22T16:00:52.7472",
-              "Expires": null
-            }]"#
-        .as_bytes();
-
-        let slice_iterator = SliceIterator::new(src);
-        let json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
-
-        let value = json_array_iterator.get_next().unwrap().unwrap();
-
-        let object = value.unwrap_as_object(&json_array_iterator).unwrap();
-
-        let param = object.get_next().unwrap().unwrap();
-        assert_eq!("Id", param.name.as_str(&object).unwrap().as_str());
-
-        assert_eq!("YourFin", param.value.as_str(&object).unwrap().as_str());
-
-        let param = object.get_next().unwrap().unwrap();
-        assert_eq!("BaseDomain", param.name.as_str(&object).unwrap().as_str());
-
-        assert_eq!(
-            "your_fin.tech",
-            param.value.as_str(&object).unwrap().as_str()
-        );
-
-        let param = object.get_next().unwrap().unwrap();
-        assert_eq!("DomainsPool", param.name.as_str(&object).unwrap().as_str());
-
-        assert_eq!(true, param.value.is_array(&object));
-
-        let param = object.get_next().unwrap().unwrap();
-        assert_eq!(
-            "CakeRegistrationId",
-            param.name.as_str(&object).unwrap().as_str()
-        );
-
-        assert_eq!("9", param.value.as_str(&object).unwrap().as_str());
-
-        let param = object.get_next().unwrap().unwrap();
-        assert_eq!("TimeStamp", param.name.as_str(&object).unwrap().as_str());
-
-        println!(
-            "{}",
-            param.value.as_date_time(&object).unwrap().to_rfc3339()
-        );
-    }
-
-    #[test]
-    fn test_from_file() {
-        let src = std::fs::read_to_string("test.json").unwrap();
-
-        let slice_iterator = SliceIterator::from_str(src.as_str());
-        let json_array_iterator = JsonArrayIterator::new(slice_iterator).unwrap();
-
-        while let Some(itm) = json_array_iterator.get_next() {
-            let itm = itm.unwrap();
-
-            println!("-----");
-            println!("{}", itm.as_str(&json_array_iterator).unwrap().as_str());
-        }
+        assert!(array_iter.get_next().is_none())
     }
 }

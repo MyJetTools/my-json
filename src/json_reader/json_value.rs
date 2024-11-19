@@ -1,8 +1,6 @@
-use rust_extensions::{
-    array_of_bytes_iterator::SliceIterator, date_time::DateTimeAsMicroseconds, StrOrString,
-};
+use rust_extensions::{date_time::DateTimeAsMicroseconds, StrOrString};
 
-use super::{array_iterator::JsonArrayIterator, JsonFirstLineReader, JsonParseError};
+use super::{JsonArrayIterator, JsonFirstLineIterator, JsonParseError};
 
 pub trait AsJsonSlice {
     fn as_slice(&self) -> &[u8];
@@ -55,16 +53,12 @@ impl JsonValue {
         }
 
         if crate::json_utils::is_array(slice) {
-            let slice_iterator = SliceIterator::new(slice);
-            let json_array_iterator = JsonArrayIterator::new(slice_iterator)?;
+            let json_array_iterator = JsonArrayIterator::new(slice)?;
             return Ok(UnwrappedValue::Array(json_array_iterator));
         }
 
         if crate::json_utils::is_object(slice) {
-            let slice_iterator = SliceIterator::new(slice);
-            return Ok(UnwrappedValue::Object(JsonFirstLineReader::new(
-                slice_iterator,
-            )));
+            return Ok(UnwrappedValue::Object(JsonFirstLineIterator::new(slice)));
         }
 
         return Ok(UnwrappedValue::String(convert_to_utf8(slice)?));
@@ -197,12 +191,11 @@ impl JsonValue {
     pub fn unwrap_as_object<'s>(
         &self,
         as_json_slice: &'s impl AsJsonSlice,
-    ) -> Result<JsonFirstLineReader<SliceIterator<'s>>, JsonParseError> {
+    ) -> Result<JsonFirstLineIterator<'s>, JsonParseError> {
         let slice = as_json_slice.as_slice()[self.start..self.end].as_ref();
 
         if crate::json_utils::is_object(slice) {
-            let slice_iterator = SliceIterator::new(slice);
-            return Ok(JsonFirstLineReader::new(slice_iterator));
+            return Ok(JsonFirstLineIterator::new(slice));
         }
 
         Err(JsonParseError::new(
@@ -282,12 +275,11 @@ impl JsonValue {
     pub fn unwrap_as_array<'s>(
         &self,
         as_json_slice: &'s impl AsJsonSlice,
-    ) -> Result<JsonArrayIterator<SliceIterator<'s>>, JsonParseError> {
+    ) -> Result<JsonArrayIterator<'s>, JsonParseError> {
         let slice = as_json_slice.as_slice()[self.start..self.end].as_ref();
 
         if crate::json_utils::is_array(slice) {
-            let slice_iterator = SliceIterator::new(slice);
-            return JsonArrayIterator::new(slice_iterator);
+            return JsonArrayIterator::new(slice);
         }
 
         Err(JsonParseError::new(
@@ -365,8 +357,8 @@ pub enum UnwrappedValue<'s> {
     Number(i64),
     Double(f64),
     Boolean(bool),
-    Array(JsonArrayIterator<SliceIterator<'s>>),
-    Object(JsonFirstLineReader<SliceIterator<'s>>),
+    Array(JsonArrayIterator<'s>),
+    Object(JsonFirstLineIterator<'s>),
 }
 
 fn convert_to_utf8(src: &[u8]) -> Result<&str, JsonParseError> {

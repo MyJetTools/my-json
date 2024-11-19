@@ -1,7 +1,6 @@
 //mod read_mode;
-mod reader;
+mod reader_inner;
 //mod states;
 //pub use read_mode::*;
-pub use reader::JsonFirstLineReader;
-mod first_line_iterator_from_slice;
-pub use first_line_iterator_from_slice::*;
+mod first_line_iterator;
+pub use first_line_iterator::*;

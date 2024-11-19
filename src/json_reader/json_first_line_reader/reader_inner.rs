@@ -6,21 +6,17 @@ use self::sync_reader::find_the_end_of_the_string;
 
 use super::super::JsonParseError;
 
-pub struct JsonFirstLineReader<TArrayOfBytesIterator: ArrayOfBytesIterator> {
+pub(crate) struct JsonFirstLineReaderInner<TArrayOfBytesIterator: ArrayOfBytesIterator> {
     raw: TArrayOfBytesIterator,
     had_init: UnsafeValue<bool>,
 }
 
-impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBytesIterator> {
+impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReaderInner<TArrayOfBytesIterator> {
     pub fn new(raw: TArrayOfBytesIterator) -> Self {
         Self {
             raw,
             had_init: UnsafeValue::new(false),
         }
-    }
-
-    pub fn get_src_slice(&self) -> &[u8] {
-        self.raw.get_src_slice()
     }
 
     fn init_if_requires(&self) -> Result<bool, JsonParseError> {
@@ -105,24 +101,24 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReader<TArrayOfBy
 }
 
 impl<TArrayOfBytesIterator: ArrayOfBytesIterator> AsJsonSlice
-    for JsonFirstLineReader<TArrayOfBytesIterator>
+    for JsonFirstLineReaderInner<TArrayOfBytesIterator>
 {
     fn as_slice(&self) -> &[u8] {
         self.raw.get_src_slice()
     }
 }
 
-impl<'s> Into<JsonFirstLineReader<SliceIterator<'s>>> for &'s [u8] {
-    fn into(self) -> JsonFirstLineReader<SliceIterator<'s>> {
+impl<'s> Into<JsonFirstLineReaderInner<SliceIterator<'s>>> for &'s [u8] {
+    fn into(self) -> JsonFirstLineReaderInner<SliceIterator<'s>> {
         let slice_iterator = SliceIterator::new(self);
-        JsonFirstLineReader::new(slice_iterator)
+        JsonFirstLineReaderInner::new(slice_iterator)
     }
 }
 
-impl<'s> Into<JsonFirstLineReader<SliceIterator<'s>>> for &'s str {
-    fn into(self) -> JsonFirstLineReader<SliceIterator<'s>> {
+impl<'s> Into<JsonFirstLineReaderInner<SliceIterator<'s>>> for &'s str {
+    fn into(self) -> JsonFirstLineReaderInner<SliceIterator<'s>> {
         let slice_iterator = SliceIterator::new(self.as_bytes());
-        JsonFirstLineReader::new(slice_iterator)
+        JsonFirstLineReaderInner::new(slice_iterator)
     }
 }
 
@@ -137,7 +133,7 @@ mod tests {
         let src_data = "{\"name1\":\"123\", \"name2\":true,       \"name3\":null, \"name4\":0.12, \"name5\":{\"a\":\"b\"}}".as_bytes();
 
         let slice_iterator = SliceIterator::new(src_data);
-        let parser = JsonFirstLineReader::new(slice_iterator);
+        let parser = JsonFirstLineReaderInner::new(slice_iterator);
 
         let item = parser.get_next().unwrap().unwrap();
 
@@ -175,7 +171,7 @@ mod tests {
 
         let slice_iterator = SliceIterator::new(fist_line);
 
-        let parser = JsonFirstLineReader::new(slice_iterator);
+        let parser = JsonFirstLineReaderInner::new(slice_iterator);
 
         let item = parser.get_next().unwrap().unwrap();
 
@@ -214,7 +210,7 @@ mod tests {
 
         let slice_iterator = SliceIterator::new(json);
 
-        let first_line_reader = JsonFirstLineReader::new(slice_iterator);
+        let first_line_reader = JsonFirstLineReaderInner::new(slice_iterator);
 
         while let Some(sub_json) = first_line_reader.get_next() {
             let sub_json = sub_json.unwrap();
@@ -242,7 +238,7 @@ mod tests {
 
         let slice_iterator = SliceIterator::new(json);
 
-        let first_line_reader = JsonFirstLineReader::new(slice_iterator);
+        let first_line_reader = JsonFirstLineReaderInner::new(slice_iterator);
 
         while let Some(sub_json) = first_line_reader.get_next() {
             let sub_json = sub_json.unwrap();
@@ -271,7 +267,7 @@ mod tests {
 
         let slice_iterator = SliceIterator::new(json);
 
-        let first_line_reader = JsonFirstLineReader::new(slice_iterator);
+        let first_line_reader = JsonFirstLineReaderInner::new(slice_iterator);
 
         while let Some(sub_json) = first_line_reader.get_next() {
             let sub_json = sub_json.unwrap();

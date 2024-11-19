@@ -31,7 +31,6 @@ impl<'s> JsonFieldNameRef<'s> {
 
 #[cfg(test)]
 mod tests {
-    use rust_extensions::array_of_bytes_iterator::*;
 
     use crate::json_reader::*;
 
@@ -39,33 +38,32 @@ mod tests {
     pub fn test_simple_parse() {
         let src_data = "{\"name1\":\"123\", \"name2\":true,       \"name3\":null, \"name4\":0.12, \"name5\":{\"a\":\"b\"}}".as_bytes();
 
-        let slice_iterator = SliceIterator::new(src_data);
-        let parser = JsonFirstLineReader::new(slice_iterator);
+        let parser = JsonFirstLineIterator::new(src_data.as_slice());
 
-        let item = parser.get_next().unwrap().unwrap().as_ref(&parser);
+        let (name, value) = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("\"name1\"", item.name.as_raw_str().unwrap());
-        assert_eq!("\"123\"", item.value.as_raw_str().unwrap());
+        assert_eq!("\"name1\"", name.as_raw_str().unwrap());
+        assert_eq!("\"123\"", value.as_raw_str().unwrap());
 
-        let item = parser.get_next().unwrap().unwrap().as_ref(&parser);
+        let (name, value) = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("\"name2\"", item.name.as_raw_str().unwrap());
-        assert_eq!("true", item.value.as_raw_str().unwrap());
+        assert_eq!("\"name2\"", name.as_raw_str().unwrap());
+        assert_eq!("true", value.as_raw_str().unwrap());
 
-        let item = parser.get_next().unwrap().unwrap().as_ref(&parser);
+        let (name, value) = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("\"name3\"", item.name.as_raw_str().unwrap());
-        assert_eq!("null", item.value.as_raw_str().unwrap());
+        assert_eq!("\"name3\"", name.as_raw_str().unwrap());
+        assert_eq!("null", value.as_raw_str().unwrap());
 
-        let item = parser.get_next().unwrap().unwrap().as_ref(&parser);
+        let (name, value) = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("\"name4\"", item.name.as_raw_str().unwrap());
-        assert_eq!("0.12", item.value.as_raw_str().unwrap());
+        assert_eq!("\"name4\"", name.as_raw_str().unwrap());
+        assert_eq!("0.12", value.as_raw_str().unwrap());
 
-        let item = parser.get_next().unwrap().unwrap().as_ref(&parser);
+        let (name, value) = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("\"name5\"", item.name.as_raw_str().unwrap());
-        assert_eq!("{\"a\":\"b\"}", item.value.as_raw_str().unwrap());
+        assert_eq!("\"name5\"", name.as_raw_str().unwrap());
+        assert_eq!("{\"a\":\"b\"}", value.as_raw_str().unwrap());
 
         let item = parser.get_next();
 
@@ -76,28 +74,26 @@ mod tests {
     fn test_json_first_line() {
         let fist_line = r#"{"processId":"8269e2ac-fa3b-419a-8e65-1a606ba07942","sellAmount":0.4,"buyAmount":null,"sellAsset":"ETH","buyAsset":"USDT"}"#.as_bytes();
 
-        let slice_iterator = SliceIterator::new(fist_line);
+        let parser = JsonFirstLineIterator::new(fist_line.as_slice());
 
-        let parser = JsonFirstLineReader::new(slice_iterator);
+        let (name, value) = parser.get_next().unwrap().unwrap();
 
-        let item = parser.get_next().unwrap().unwrap().as_ref(&parser);
-
-        assert_eq!("processId", item.name.as_str().unwrap().as_str());
+        assert_eq!("processId", name.as_str().unwrap().as_str());
         assert_eq!(
             "8269e2ac-fa3b-419a-8e65-1a606ba07942",
-            item.value.as_str().unwrap().as_str()
+            value.as_str().unwrap().as_str()
         );
 
-        let item = parser.get_next().unwrap().unwrap().as_ref(&parser);
+        let (name, value) = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("sellAmount", item.name.as_str().unwrap().as_str());
-        assert_eq!("0.4", item.value.as_str().unwrap().as_str());
+        assert_eq!("sellAmount", name.as_str().unwrap().as_str());
+        assert_eq!("0.4", value.as_str().unwrap().as_str());
 
-        let item = parser.get_next().unwrap().unwrap().as_ref(&parser);
+        let (name, value) = parser.get_next().unwrap().unwrap();
 
-        assert_eq!("buyAmount", item.name.as_str().unwrap().as_str());
+        assert_eq!("buyAmount", name.as_str().unwrap().as_str());
 
-        assert!(item.value.is_null());
+        assert!(value.is_null());
     }
 
     #[test]
@@ -115,13 +111,12 @@ mod tests {
         }"###
             .as_bytes();
 
-        let slice_iterator = SliceIterator::new(json);
-
-        let first_line_reader = JsonFirstLineReader::new(slice_iterator);
+        let first_line_reader = JsonFirstLineIterator::new(json.as_slice());
 
         while let Some(sub_json) = first_line_reader.get_next() {
-            let sub_json = sub_json.unwrap().as_ref(&first_line_reader);
-            println!("{}", sub_json.name.as_str().unwrap().as_str(),);
+            let (name, value) = sub_json.unwrap();
+            println!("{}", name.as_str().unwrap().as_str(),);
+            println!("{:?}", value.as_raw_str());
         }
     }
 
@@ -140,16 +135,14 @@ mod tests {
         }"###
             .as_bytes();
 
-        let slice_iterator = SliceIterator::new(json);
-
-        let first_line_reader = JsonFirstLineReader::new(slice_iterator);
+        let first_line_reader = JsonFirstLineIterator::new(json.as_ref());
 
         while let Some(sub_json) = first_line_reader.get_next() {
-            let sub_json = sub_json.unwrap().as_ref(&first_line_reader);
+            let (name, value) = sub_json.unwrap();
             println!(
                 "{}:{}",
-                sub_json.name.as_raw_str().unwrap(),
-                sub_json.value.as_raw_str().unwrap()
+                name.as_raw_str().unwrap(),
+                value.as_raw_str().unwrap()
             );
         }
     }
