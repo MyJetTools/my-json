@@ -2,15 +2,15 @@ use rust_extensions::StrOrString;
 
 use crate::json_reader::JsonParseError;
 
-use super::JsonFieldName;
+use super::JsonContentOffset;
 
 pub struct JsonFieldNameRef<'s> {
-    pub data: JsonFieldName,
+    pub data: JsonContentOffset,
     field_name_slice: &'s [u8],
 }
 
 impl<'s> JsonFieldNameRef<'s> {
-    pub fn new(data: JsonFieldName, field_name_slice: &'s [u8]) -> Self {
+    pub fn new(data: JsonContentOffset, field_name_slice: &'s [u8]) -> Self {
         Self {
             data,
             field_name_slice,

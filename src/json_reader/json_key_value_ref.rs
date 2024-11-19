@@ -1,6 +1,6 @@
 use crate::json_reader::JsonValueRef;
 
-use super::{JsonFieldName, JsonFieldNameRef, JsonValue};
+use super::{JsonContentOffset, JsonFieldNameRef, JsonValue};
 
 pub struct JsonKeyValueRef<'s> {
     pub name: JsonFieldNameRef<'s>,
@@ -8,7 +8,7 @@ pub struct JsonKeyValueRef<'s> {
 }
 
 impl<'s> JsonKeyValueRef<'s> {
-    pub fn new(name: JsonFieldName, value: JsonValue, slice: &'s [u8]) -> Self {
+    pub fn new(name: JsonContentOffset, value: JsonValue, slice: &'s [u8]) -> Self {
         Self {
             name: JsonFieldNameRef::new(name, slice),
             value: JsonValueRef::new(value, slice),

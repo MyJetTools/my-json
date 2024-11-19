@@ -1,9 +1,9 @@
 use crate::json_reader::AsJsonSlice;
 
-use super::{JsonFieldName, JsonKeyValueRef, JsonValue};
+use super::{JsonContentOffset, JsonKeyValueRef, JsonValue};
 
 pub struct JsonKeyValue {
-    pub name: JsonFieldName,
+    pub name: JsonContentOffset,
     pub value: JsonValue,
 }
 
@@ -19,7 +19,7 @@ impl std::fmt::Debug for JsonKeyValue {
 impl JsonKeyValue {
     pub fn new(key_start: usize, key_end: usize, value_start: usize, value_end: usize) -> Self {
         JsonKeyValue {
-            name: JsonFieldName {
+            name: JsonContentOffset {
                 start: key_start,
                 end: key_end,
             },

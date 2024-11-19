@@ -5,12 +5,12 @@ use crate::json_reader::{json_value::AsJsonSlice, JsonParseError};
 use super::JsonFieldNameRef;
 
 #[derive(Debug, Clone)]
-pub struct JsonFieldName {
+pub struct JsonContentOffset {
     pub start: usize,
     pub end: usize,
 }
 
-impl JsonFieldName {
+impl JsonContentOffset {
     pub fn as_ref<'s>(&self, json: &'s impl AsJsonSlice) -> JsonFieldNameRef<'s> {
         JsonFieldNameRef::new(self.clone(), json.as_slice())
     }
