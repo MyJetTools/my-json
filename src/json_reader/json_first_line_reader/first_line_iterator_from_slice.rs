@@ -47,6 +47,12 @@ impl<'s> Into<JsonFirstLineIteratorFromSlice<'s>> for &'s str {
     }
 }
 
+impl<'s> Into<JsonFirstLineIteratorFromSlice<'s>> for &'s [u8] {
+    fn into(self) -> JsonFirstLineIteratorFromSlice<'s> {
+        JsonFirstLineIteratorFromSlice::new(self)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::json_reader::JsonFirstLineIteratorFromSlice;
