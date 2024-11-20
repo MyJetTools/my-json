@@ -1,14 +1,15 @@
+use std::cell::Cell;
 use std::fmt::Debug;
 
 use super::json_value::AsJsonSlice;
 use super::JsonParseError;
 use super::{bytes_of_array_reader::*, JsonValue};
 
-use rust_extensions::{array_of_bytes_iterator::*, UnsafeValue};
+use rust_extensions::array_of_bytes_iterator::*;
 
 pub struct JsonArrayIteratorInner<TArrayOfBytesIterator: ArrayOfBytesIterator> {
     data: TArrayOfBytesIterator,
-    initialized: UnsafeValue<bool>,
+    initialized: Cell<bool>,
 }
 
 impl Debug for JsonArrayIteratorInner<SliceIterator<'_>> {
@@ -27,7 +28,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIteratorInner<TArrayO
         match result {
             Ok(_) => Ok(Self {
                 data,
-                initialized: UnsafeValue::new(false),
+                initialized: Cell::new(false),
             }),
             Err(result) => Err(JsonParseError::CanNotFineStartOfTheArrayObject(
                 result.into_string(),
@@ -44,7 +45,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIteratorInner<TArrayO
 
         match result {
             FoundResult::Ok(_) => {
-                self.initialized.set_value(true);
+                self.initialized.set(true);
                 return Ok(());
             }
             FoundResult::EndOfJson => {
@@ -62,7 +63,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIteratorInner<TArrayO
     }
 
     pub fn get_next(&self) -> Option<Result<JsonValue, JsonParseError>> {
-        let start_value = if !self.initialized.get_value() {
+        let start_value = if !self.initialized.get() {
             match self.init() {
                 Ok(_) => match sync_reader::skip_white_spaces(&self.data) {
                     Ok(value) => value,

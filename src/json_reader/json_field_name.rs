@@ -12,7 +12,7 @@ pub struct JsonContentOffset {
 
 impl JsonContentOffset {
     pub fn as_ref<'s>(&self, json: &'s impl AsJsonSlice) -> JsonFieldNameRef<'s> {
-        JsonFieldNameRef::new(self.clone(), json.as_slice())
+        JsonFieldNameRef::new(self.clone(), json.as_slice()[self.start..self.end].as_ref())
     }
 
     pub fn as_raw_str<'s>(&self, json: &'s impl AsJsonSlice) -> Result<&'s str, JsonParseError> {

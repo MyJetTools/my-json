@@ -1,6 +1,8 @@
+use std::cell::Cell;
+
 use crate::json_reader::json_value::AsJsonSlice;
 use crate::json_reader::{bytes_of_array_reader::*, JsonKeyValue};
-use rust_extensions::{array_of_bytes_iterator::*, UnsafeValue};
+use rust_extensions::array_of_bytes_iterator::*;
 
 use self::sync_reader::find_the_end_of_the_string;
 
@@ -8,19 +10,19 @@ use super::super::JsonParseError;
 
 pub struct JsonFirstLineReaderInner<TArrayOfBytesIterator: ArrayOfBytesIterator> {
     raw: TArrayOfBytesIterator,
-    had_init: UnsafeValue<bool>,
+    had_init: Cell<bool>,
 }
 
 impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReaderInner<TArrayOfBytesIterator> {
     pub fn new(raw: TArrayOfBytesIterator) -> Self {
         Self {
             raw,
-            had_init: UnsafeValue::new(false),
+            had_init: Cell::new(false),
         }
     }
 
     fn init_if_requires(&self) -> Result<bool, JsonParseError> {
-        if self.had_init.get_value() {
+        if self.had_init.get() {
             let token = sync_reader::skip_white_spaces_and_get_expected_token(
                 &self.raw,
                 ExpectedTokenJsonObjectSeparatorOrCloseBracket,
@@ -39,7 +41,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReaderInner<TArra
                 let msg = err.into_string();
                 return Err(JsonParseError::CanNotFineStartOfTheJsonObject(msg));
             }
-            self.had_init.set_value(true);
+            self.had_init.set(true);
         }
 
         Ok(false)
