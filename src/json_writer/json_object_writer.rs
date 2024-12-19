@@ -16,7 +16,7 @@ impl JsonObjectWriter {
         }
     }
 
-    pub(crate) fn new_as_nested(mut raw: Vec<u8>) -> Self {
+    pub fn from_vec(mut raw: Vec<u8>) -> Self {
         raw.push(b'{');
         Self {
             first_element: true,
@@ -54,7 +54,7 @@ impl JsonObjectWriter {
 
         let raw = self.raw.take().unwrap();
 
-        let mut json_object_writer = Self::new_as_nested(raw);
+        let mut json_object_writer = Self::from_vec(raw);
 
         write_object(&mut json_object_writer);
 
@@ -72,7 +72,7 @@ impl JsonObjectWriter {
 
         let raw = self.raw.take().unwrap();
 
-        let mut json_array_writer = JsonArrayWriter::new_as_nested(raw);
+        let mut json_array_writer = JsonArrayWriter::from_vec(raw);
 
         write_array(&mut json_array_writer);
 
