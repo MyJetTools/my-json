@@ -97,6 +97,11 @@ impl JsonObjectWriter {
         dest.push_str(self.raw.as_ref().unwrap());
         dest.push('}');
     }
+
+    pub fn write_into_vec(&self, dest: &mut Vec<u8>) {
+        dest.extend_from_slice(self.raw.as_ref().unwrap().as_bytes());
+        dest.push(b'}');
+    }
 }
 
 impl JsonObject for JsonObjectWriter {

@@ -67,7 +67,7 @@ impl JsonArrayWriter {
         dest.push(']');
     }
 
-    pub fn write_into(&self, dest: &mut Vec<u8>) {
+    pub fn write_into_vec(&self, dest: &mut Vec<u8>) {
         dest.extend_from_slice(self.raw.as_ref().unwrap().as_bytes());
         dest.push(b']');
     }
