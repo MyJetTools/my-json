@@ -21,7 +21,7 @@ impl<'s> JsonFieldNameRef<'s> {
         self.data.as_str(&self.src_json)
     }
 
-    pub fn as_slice(&'s self) -> &[u8] {
+    pub fn as_slice(&'s self) -> &'s [u8] {
         &self.src_json[self.data.start..self.data.end]
     }
 

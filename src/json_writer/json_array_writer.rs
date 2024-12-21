@@ -1,14 +1,14 @@
 use super::{JsonObject, JsonObjectWriter};
 
 pub struct JsonArrayWriter {
-    raw: Option<Vec<u8>>,
+    raw: Option<String>,
     first_element: bool,
 }
 
 impl JsonArrayWriter {
     pub fn new() -> Self {
-        let mut raw = Vec::new();
-        raw.push(b'[');
+        let mut raw = String::new();
+        raw.push('[');
 
         Self {
             raw: Some(raw),
@@ -16,8 +16,8 @@ impl JsonArrayWriter {
         }
     }
 
-    pub fn from_vec(mut raw: Vec<u8>) -> Self {
-        raw.push(b'[');
+    pub fn from_string(mut raw: String) -> Self {
+        raw.push('[');
         Self {
             first_element: true,
             raw: Some(raw),
@@ -28,21 +28,18 @@ impl JsonArrayWriter {
         if self.first_element {
             self.first_element = false;
         } else {
-            self.raw.as_mut().unwrap().push(b',');
+            self.raw.as_mut().unwrap().push(',');
         }
     }
 
     pub fn write_null_element(&mut self) {
         self.add_delimiter();
-        self.raw
-            .as_mut()
-            .unwrap()
-            .extend_from_slice("null".as_bytes());
+        self.raw.as_mut().unwrap().push_str("null");
     }
 
-    pub fn build(mut self) -> Vec<u8> {
+    pub fn build(mut self) -> String {
         let mut raw = self.raw.take().unwrap();
-        raw.push(b']');
+        raw.push(']');
         raw
     }
 
@@ -57,7 +54,7 @@ impl JsonArrayWriter {
 
         let raw = self.raw.take().unwrap();
 
-        let mut json_object_writer = JsonObjectWriter::from_vec(raw);
+        let mut json_object_writer = JsonObjectWriter::from_string(raw);
 
         write_object(&mut json_object_writer);
 
@@ -65,14 +62,19 @@ impl JsonArrayWriter {
         self.raw = Some(raw);
     }
 
-    pub fn build_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.raw.as_ref().unwrap());
+    pub fn build_into(&self, dest: &mut String) {
+        dest.push_str(self.raw.as_ref().unwrap());
+        dest.push(']');
+    }
+
+    pub fn write_into(&self, dest: &mut Vec<u8>) {
+        dest.extend_from_slice(self.raw.as_ref().unwrap().as_bytes());
         dest.push(b']');
     }
 }
 
 impl JsonObject for JsonArrayWriter {
-    fn write_into(&self, dest: &mut Vec<u8>) {
+    fn write_into(&self, dest: &mut String) {
         self.build_into(dest)
     }
 }
@@ -98,7 +100,7 @@ mod tests {
 
         assert_eq!(
             result,
-            b"[{\"key1\":\"value1\",\"key2\":\"value2\"},{\"key1\":\"value1\",\"key2\":\"value2\"}]"
+            "[{\"key1\":\"value1\",\"key2\":\"value2\"},{\"key1\":\"value1\",\"key2\":\"value2\"}]"
         );
     }
 }

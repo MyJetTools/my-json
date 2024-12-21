@@ -2,13 +2,13 @@ use super::{JsonArrayWriter, JsonObject};
 
 pub struct JsonObjectWriter {
     first_element: bool,
-    raw: Option<Vec<u8>>,
+    raw: Option<String>,
 }
 
 impl JsonObjectWriter {
     pub fn new() -> Self {
-        let mut raw = Vec::new();
-        raw.push(b'{');
+        let mut raw = String::new();
+        raw.push('{');
 
         Self {
             first_element: true,
@@ -16,8 +16,8 @@ impl JsonObjectWriter {
         }
     }
 
-    pub fn from_vec(mut raw: Vec<u8>) -> Self {
-        raw.push(b'{');
+    pub fn from_string(mut raw: String) -> Self {
+        raw.push('{');
         Self {
             first_element: true,
             raw: Some(raw),
@@ -32,16 +32,16 @@ impl JsonObjectWriter {
         if self.first_element {
             self.first_element = false;
         } else {
-            self.raw.as_mut().unwrap().push(b',');
+            self.raw.as_mut().unwrap().push(',');
         }
     }
 
     fn write_key(&mut self, key: &str) {
         let raw = self.raw.as_mut().unwrap();
-        raw.push(b'"');
+        raw.push('"');
 
         crate::json_string_value::write_escaped_json_string_value(key, raw);
-        raw.extend_from_slice("\":".as_bytes());
+        raw.push_str("\":");
     }
 
     pub fn write_json_object(
@@ -54,7 +54,7 @@ impl JsonObjectWriter {
 
         let raw = self.raw.take().unwrap();
 
-        let mut json_object_writer = Self::from_vec(raw);
+        let mut json_object_writer = Self::from_string(raw);
 
         write_object(&mut json_object_writer);
 
@@ -72,7 +72,7 @@ impl JsonObjectWriter {
 
         let raw = self.raw.take().unwrap();
 
-        let mut json_array_writer = JsonArrayWriter::from_vec(raw);
+        let mut json_array_writer = JsonArrayWriter::from_string(raw);
 
         write_array(&mut json_array_writer);
 
@@ -87,20 +87,20 @@ impl JsonObjectWriter {
         value.write_into(self.raw.as_mut().unwrap());
     }
 
-    pub fn build(mut self) -> Vec<u8> {
+    pub fn build(mut self) -> String {
         let mut raw = self.raw.take().unwrap();
-        raw.push(b'}');
+        raw.push('}');
         raw
     }
 
-    pub fn build_into(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(self.raw.as_ref().unwrap());
-        dest.push(b'}');
+    pub fn build_into(&self, dest: &mut String) {
+        dest.push_str(self.raw.as_ref().unwrap());
+        dest.push('}');
     }
 }
 
 impl JsonObject for JsonObjectWriter {
-    fn write_into(&self, dest: &mut Vec<u8>) {
+    fn write_into(&self, dest: &mut String) {
         self.build_into(dest)
     }
 }
@@ -118,10 +118,7 @@ mod tests {
 
         let result = json_write.build();
 
-        assert_eq!(
-            "{\"key\":\"value\",\"key2\":\"\\'value\\'\"}",
-            std::str::from_utf8(&result).unwrap()
-        );
+        assert_eq!("{\"key\":\"value\",\"key2\":\"\\'value\\'\"}", result);
     }
 
     #[test]
@@ -136,8 +133,6 @@ mod tests {
         });
 
         let result = json_writer.build();
-
-        let result = String::from_utf8(result).unwrap();
 
         println!("{}", result);
     }
@@ -161,8 +156,6 @@ mod tests {
         });
 
         let result = json_writer.build();
-
-        let result = String::from_utf8(result).unwrap();
 
         assert_eq!("{\"key1\":\"value1\",\"key2\":[{\"key3\":\"value3\",\"key4\":54},{\"key3\":\"value5\",\"key4\":55}]}", result.as_str());
     }
