@@ -90,4 +90,20 @@ mod tests {
 
         assert!(value.get_next().is_none());
     }
+
+    #[test]
+    fn tests() {
+        let json = r#"{"PartitionKey":"t","RowKey":"fab16435","TimeStamp":"","TraderId":"284daf07","Expires":"2024-12-24T11:46:51.249725+00:00","Claims":null}"#;
+
+        let json_first_line_iterator = JsonFirstLineIterator::new(json.as_bytes());
+
+        while let Some(next) = json_first_line_iterator.get_next() {
+            let (key, value) = next.unwrap();
+            println!(
+                "{}: {}",
+                key.as_raw_str().unwrap(),
+                value.as_raw_str().unwrap()
+            );
+        }
+    }
 }
