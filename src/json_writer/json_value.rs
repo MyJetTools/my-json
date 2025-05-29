@@ -72,6 +72,13 @@ impl JsonObject for f32 {
     }
 }
 
+#[cfg(feature = "decimal")]
+impl JsonObject for rust_decimal::Decimal {
+    fn write_into(&self, dest: &mut String) {
+        dest.push_str(self.to_string().as_str());
+    }
+}
+
 impl JsonObject for bool {
     fn write_into(&self, dest: &mut String) {
         if *self {
