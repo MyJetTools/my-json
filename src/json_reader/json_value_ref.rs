@@ -1,7 +1,8 @@
 use rust_extensions::{date_time::DateTimeAsMicroseconds, StrOrString};
 
 use super::{
-    json_value::UnwrappedValue, JsonArrayIterator, JsonFirstLineIterator, JsonParseError, JsonValue,
+    json_value::UnwrappedJsonValue, JsonArrayIterator, JsonFirstLineIterator, JsonParseError,
+    JsonValue,
 };
 
 #[derive(Clone, Debug)]
@@ -18,7 +19,7 @@ impl<'s> JsonValueRef<'s> {
         };
     }
 
-    pub fn unwrap_value(&'s self) -> Result<UnwrappedValue<'s>, JsonParseError> {
+    pub fn unwrap_value(&'s self) -> Result<UnwrappedJsonValue<'s>, JsonParseError> {
         self.data.unwrap_value(&self.json_slice)
     }
 

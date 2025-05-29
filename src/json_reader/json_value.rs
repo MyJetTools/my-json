@@ -31,37 +31,39 @@ impl JsonValue {
     pub fn unwrap_value<'s>(
         &self,
         as_json_slice: &'s impl AsJsonSlice,
-    ) -> Result<UnwrappedValue<'s>, JsonParseError> {
+    ) -> Result<UnwrappedJsonValue<'s>, JsonParseError> {
         let slice = as_json_slice.as_slice()[self.start..self.end].as_ref();
 
         if crate::json_utils::is_null(slice) {
-            return Ok(UnwrappedValue::Null);
+            return Ok(UnwrappedJsonValue::Null);
         }
 
         if let Some(value) = crate::json_utils::as_bool_value(slice) {
-            return Ok(UnwrappedValue::Boolean(value));
+            return Ok(UnwrappedJsonValue::Boolean(value));
         }
 
         match crate::json_utils::is_number(slice) {
             crate::json_utils::NumberType::NaN => {}
             crate::json_utils::NumberType::Number => {
-                return Ok(UnwrappedValue::Number(convert_to_i64(slice)?));
+                return Ok(UnwrappedJsonValue::Number(convert_to_i64(slice)?));
             }
             crate::json_utils::NumberType::Double => {
-                return Ok(UnwrappedValue::Double(convert_to_f64(slice)?));
+                return Ok(UnwrappedJsonValue::Double(convert_to_f64(slice)?));
             }
         }
 
         if crate::json_utils::is_array(slice) {
             let json_array_iterator = JsonArrayIterator::new(slice)?;
-            return Ok(UnwrappedValue::Array(json_array_iterator));
+            return Ok(UnwrappedJsonValue::Array(json_array_iterator));
         }
 
         if crate::json_utils::is_object(slice) {
-            return Ok(UnwrappedValue::Object(JsonFirstLineIterator::new(slice)));
+            return Ok(UnwrappedJsonValue::Object(JsonFirstLineIterator::new(
+                slice,
+            )));
         }
 
-        return Ok(UnwrappedValue::String(convert_to_utf8(slice)?));
+        return Ok(UnwrappedJsonValue::String(convert_to_utf8(slice)?));
     }
 
     /*
@@ -351,7 +353,7 @@ impl JsonValue {
     }
 }
 
-pub enum UnwrappedValue<'s> {
+pub enum UnwrappedJsonValue<'s> {
     Null,
     String(&'s str),
     Number(i64),
