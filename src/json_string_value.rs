@@ -1,12 +1,11 @@
 use rust_extensions::StrOrString;
 
-const SINGLE_QUOTE: char = '\'';
 const DOUBLE_QUOTE: char = '"';
 const BACK_SLASH: char = '\\';
 
 fn has_to_escape(src: &[u8]) -> bool {
     for i in 0..src.len() {
-        if src[i] == '"' as u8 || src[i] == '\\' as u8 || src[i] == '\'' as u8 {
+        if src[i] == DOUBLE_QUOTE as u8 || src[i] == BACK_SLASH as u8 {
             return true;
         }
     }
@@ -24,10 +23,6 @@ pub fn write_escaped_json_string_value(src: &str, out: &mut String) {
             BACK_SLASH => {
                 out.push('\\');
                 out.push('\\');
-            }
-            SINGLE_QUOTE => {
-                out.push('\\');
-                out.push('\'');
             }
             _ => {
                 out.push(c);
@@ -50,9 +45,6 @@ pub fn escape_json_string_value<'s>(src: &'s str) -> StrOrString<'s> {
             }
             BACK_SLASH => {
                 result.push_str("\\\\");
-            }
-            SINGLE_QUOTE => {
-                result.push_str("''");
             }
             _ => {
                 result.push(c);
@@ -110,6 +102,10 @@ mod test {
 
         let escaped = super::escape_json_string_value(src);
 
-        assert_eq!("Air Suspension Smoker''s", escaped.as_str());
+        let de_escaped = super::de_escape_json_string_value(escaped.as_str());
+
+        assert_eq!("Air Suspension Smoker's", escaped.as_str());
+
+        assert_eq!("Air Suspension Smoker's", de_escaped.as_str());
     }
 }
