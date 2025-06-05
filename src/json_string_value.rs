@@ -52,7 +52,7 @@ pub fn escape_json_string_value<'s>(src: &'s str) -> StrOrString<'s> {
                 result.push_str("\\\\");
             }
             SINGLE_QUOTE => {
-                result.push_str("\\\'");
+                result.push_str("''");
             }
             _ => {
                 result.push(c);
@@ -102,5 +102,14 @@ mod test {
         let result = super::de_escape_json_string_value(escaped.as_str());
 
         assert_eq!(src, result.as_str());
+    }
+
+    #[test]
+    pub fn test_escape_other_case() {
+        let src = "Air Suspension Smoker's";
+
+        let escaped = super::escape_json_string_value(src);
+
+        assert_eq!("Air Suspension Smoker''s", escaped.as_str());
     }
 }
