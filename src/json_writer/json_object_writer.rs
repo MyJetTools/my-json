@@ -123,7 +123,7 @@ mod tests {
 
         let result = json_write.build();
 
-        assert_eq!("{\"key\":\"value\",\"key2\":\"\\'value\\'\"}", result);
+        assert_eq!("{\"key\":\"value\",\"key2\":\"\'value\'\"}", result);
     }
 
     #[test]

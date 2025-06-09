@@ -89,7 +89,7 @@ mod test {
 
         let escaped = super::escape_json_string_value(src);
 
-        assert_eq!("Test String \\\\ \\\"MyData\\\" \\'", escaped.as_str());
+        assert_eq!("Test String \\\\ \\\"MyData\\\" '", escaped.as_str());
 
         let result = super::de_escape_json_string_value(escaped.as_str());
 
