@@ -6,7 +6,7 @@ mod json_parse_error;
 pub use json_parse_error::JsonParseError;
 
 pub use json_first_line_reader::*;
-mod json_value;
+pub(crate) mod json_value;
 pub use json_value::{AsJsonSlice, JsonValue};
 mod array_parser_async;
 pub use array_parser_async::*;

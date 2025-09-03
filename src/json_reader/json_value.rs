@@ -66,6 +66,12 @@ impl JsonValue {
         return Ok(UnwrappedJsonValue::String(convert_to_utf8(slice)?));
     }
 
+    pub fn clone_with_offset(&self, offset: usize) -> Self {
+        Self {
+            start: self.start + offset,
+            end: self.end + offset,
+        }
+    }
     /*
        pub fn new(value: &'s [u8]) -> Result<JsonValue<'s>, JsonParseError> {
            if crate::json_utils::is_null(value) {

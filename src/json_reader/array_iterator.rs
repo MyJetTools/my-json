@@ -14,7 +14,7 @@ impl<'s> JsonArrayIterator<'s> {
         Ok(result)
     }
 
-    pub fn get_next(&self) -> Option<Result<JsonValueRef, JsonParseError>> {
+    pub fn get_next(&'s self) -> Option<Result<JsonValueRef<'s>, JsonParseError>> {
         let result = self.iterator.get_next()?;
 
         match result {
