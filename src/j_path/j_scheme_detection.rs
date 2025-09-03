@@ -64,10 +64,10 @@ impl<'s> SchemeDetection<'s> {
                 let new_prefix = format!("{}{}.", src_prefix, item_key.as_str());
 
                 let sub_slice = &self.src[src.start + offset..src.end + offset];
-                println!("sub_slice_pre: {}", String::from_utf8_lossy(sub_slice));
+                //    println!("sub_slice_pre: {}", String::from_utf8_lossy(sub_slice));
                 let sub_slice = &sub_slice[json_pos.start..json_pos.end];
 
-                println!("sub_slice: {}", String::from_utf8_lossy(sub_slice));
+                //    println!("sub_slice: {}", String::from_utf8_lossy(sub_slice));
 
                 json_readers_access.push((
                     src_offset + src.start,
