@@ -7,10 +7,30 @@ impl JsonValueWriter for u8 {
     }
 }
 
+impl JsonValueWriter for Option<u8> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        match self {
+            Some(v) => dest.push_str(v.to_string().as_str()),
+            None => dest.push_str("null"),
+        }
+    }
+}
+
 impl JsonValueWriter for i8 {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
+    }
+}
+
+impl JsonValueWriter for Option<i8> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        match self {
+            Some(v) => dest.push_str(v.to_string().as_str()),
+            None => dest.push_str("null"),
+        }
     }
 }
 
@@ -21,10 +41,30 @@ impl JsonValueWriter for u16 {
     }
 }
 
+impl JsonValueWriter for Option<u16> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        match self {
+            Some(v) => dest.push_str(v.to_string().as_str()),
+            None => dest.push_str("null"),
+        }
+    }
+}
+
 impl JsonValueWriter for i16 {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
+    }
+}
+
+impl JsonValueWriter for Option<i16> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        match self {
+            Some(v) => dest.push_str(v.to_string().as_str()),
+            None => dest.push_str("null"),
+        }
     }
 }
 
@@ -35,10 +75,30 @@ impl JsonValueWriter for u32 {
     }
 }
 
+impl JsonValueWriter for Option<u32> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        match self {
+            Some(v) => dest.push_str(v.to_string().as_str()),
+            None => dest.push_str("null"),
+        }
+    }
+}
+
 impl JsonValueWriter for i32 {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
+    }
+}
+
+impl JsonValueWriter for Option<i32> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        match self {
+            Some(v) => dest.push_str(v.to_string().as_str()),
+            None => dest.push_str("null"),
+        }
     }
 }
 
@@ -49,10 +109,30 @@ impl JsonValueWriter for u64 {
     }
 }
 
+impl JsonValueWriter for Option<u64> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        match self {
+            Some(v) => dest.push_str(v.to_string().as_str()),
+            None => dest.push_str("null"),
+        }
+    }
+}
+
 impl JsonValueWriter for i64 {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
+    }
+}
+
+impl JsonValueWriter for Option<i64> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        match self {
+            Some(v) => dest.push_str(v.to_string().as_str()),
+            None => dest.push_str("null"),
+        }
     }
 }
 
@@ -63,10 +143,30 @@ impl JsonValueWriter for usize {
     }
 }
 
+impl JsonValueWriter for Option<usize> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        match self {
+            Some(v) => dest.push_str(v.to_string().as_str()),
+            None => dest.push_str("null"),
+        }
+    }
+}
+
 impl JsonValueWriter for isize {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
+    }
+}
+
+impl JsonValueWriter for Option<isize> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        match self {
+            Some(v) => dest.push_str(v.to_string().as_str()),
+            None => dest.push_str("null"),
+        }
     }
 }
 
@@ -77,10 +177,30 @@ impl JsonValueWriter for f64 {
     }
 }
 
+impl JsonValueWriter for Option<f64> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        match self {
+            Some(v) => dest.push_str(v.to_string().as_str()),
+            None => dest.push_str("null"),
+        }
+    }
+}
+
 impl JsonValueWriter for f32 {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
+    }
+}
+
+impl JsonValueWriter for Option<f32> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        match self {
+            Some(v) => dest.push_str(v.to_string().as_str()),
+            None => dest.push_str("null"),
+        }
     }
 }
 
@@ -102,6 +222,16 @@ impl JsonValueWriter for bool {
     }
 }
 
+impl JsonValueWriter for Option<bool> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        match self {
+            Some(v) => bool::write(v, dest),
+            None => dest.push_str("null"),
+        }
+    }
+}
+
 impl JsonValueWriter for String {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
@@ -111,21 +241,47 @@ impl JsonValueWriter for String {
     }
 }
 
+impl JsonValueWriter for Option<String> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        match self {
+            Some(v) => write_string(dest, v),
+            None => dest.push_str("null"),
+        }
+    }
+}
+
 impl<'s> JsonValueWriter for &'s str {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
-        dest.push('"');
-        crate::json_string_value::write_escaped_json_string_value(self, dest);
-        dest.push('"');
+        write_string(dest, self)
+    }
+}
+
+impl<'s> JsonValueWriter for Option<&'s str> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        match self {
+            Some(v) => write_string(dest, v),
+            None => dest.push_str("null"),
+        }
     }
 }
 
 impl<'s> JsonValueWriter for &'s String {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
-        dest.push('"');
-        crate::json_string_value::write_escaped_json_string_value(self, dest);
-        dest.push('"');
+        write_string(dest, self)
+    }
+}
+
+impl<'s> JsonValueWriter for Option<&'s String> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        match self {
+            Some(v) => write_string(dest, v),
+            None => dest.push_str("null"),
+        }
     }
 }
 
@@ -218,6 +374,12 @@ impl<'s, T: JsonValueWriter> JsonValueWriter for &'s Vec<T> {
             itm.write(dest);
         }
     }
+}
+
+fn write_string(out: &mut String, value: &str) {
+    out.push('"');
+    crate::json_string_value::write_escaped_json_string_value(value, out);
+    out.push('"');
 }
 
 #[cfg(test)]
