@@ -247,7 +247,7 @@ mod test {
     #[test]
     fn test_write_array_to_object() {
         let a = vec!["1", "2", "3"];
-        let result = JsonObjectWriter::new().write("test", a).build();
+        let result = JsonObjectWriter::new().write("test", &a).build();
 
         assert_eq!(result, r#"{"test":["1","2","3"]}"#);
     }

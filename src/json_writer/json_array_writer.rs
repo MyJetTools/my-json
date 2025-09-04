@@ -125,7 +125,7 @@ mod tests {
             .write("key1", "value1")
             .write("key2", "value2");
         let result = super::JsonObjectWriter::new()
-            .write("array", vec![json_object])
+            .write_iter("array", [json_object].into_iter())
             .build();
 
         assert_eq!(r#"{"array":[{"key1":"value1","key2":"value2"}]}"#, result);
