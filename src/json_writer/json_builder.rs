@@ -1,3 +1,4 @@
-pub trait JsonObject {
-    fn write_into(&self, dest: &mut String);
+pub trait JsonValue {
+    const IS_ARRAY: bool;
+    fn write(&self, dest: &mut String);
 }

@@ -1,86 +1,99 @@
-use super::JsonObject;
+use super::JsonValue;
 
-impl JsonObject for u8 {
-    fn write_into(&self, dest: &mut String) {
+impl JsonValue for u8 {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonObject for i8 {
-    fn write_into(&self, dest: &mut String) {
+impl JsonValue for i8 {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonObject for u16 {
-    fn write_into(&self, dest: &mut String) {
+impl JsonValue for u16 {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonObject for i16 {
-    fn write_into(&self, dest: &mut String) {
+impl JsonValue for i16 {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonObject for u32 {
-    fn write_into(&self, dest: &mut String) {
+impl JsonValue for u32 {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonObject for i32 {
-    fn write_into(&self, dest: &mut String) {
+impl JsonValue for i32 {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonObject for u64 {
-    fn write_into(&self, dest: &mut String) {
+impl JsonValue for u64 {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonObject for i64 {
-    fn write_into(&self, dest: &mut String) {
+impl JsonValue for i64 {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonObject for usize {
-    fn write_into(&self, dest: &mut String) {
+impl JsonValue for usize {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonObject for isize {
-    fn write_into(&self, dest: &mut String) {
+impl JsonValue for isize {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonObject for f64 {
-    fn write_into(&self, dest: &mut String) {
+impl JsonValue for f64 {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonObject for f32 {
-    fn write_into(&self, dest: &mut String) {
+impl JsonValue for f32 {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
 #[cfg(feature = "decimal")]
-impl JsonObject for rust_decimal::Decimal {
+impl JsonValue for rust_decimal::Decimal {
     fn write_into(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonObject for bool {
-    fn write_into(&self, dest: &mut String) {
+impl JsonValue for bool {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
         if *self {
             dest.push_str("true");
         } else {
@@ -89,24 +102,27 @@ impl JsonObject for bool {
     }
 }
 
-impl JsonObject for String {
-    fn write_into(&self, dest: &mut String) {
+impl JsonValue for String {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
         dest.push('"');
         crate::json_string_value::write_escaped_json_string_value(self, dest);
         dest.push('"');
     }
 }
 
-impl<'s> JsonObject for &'s str {
-    fn write_into(&self, dest: &mut String) {
+impl<'s> JsonValue for &'s str {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
         dest.push('"');
         crate::json_string_value::write_escaped_json_string_value(self, dest);
         dest.push('"');
     }
 }
 
-impl<'s> JsonObject for &'s String {
-    fn write_into(&self, dest: &mut String) {
+impl<'s> JsonValue for &'s String {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
         dest.push('"');
         crate::json_string_value::write_escaped_json_string_value(self, dest);
         dest.push('"');
@@ -143,64 +159,70 @@ impl<'s> Into<RawJsonObject<'s>> for String {
     }
 }
 
-impl<'s> JsonObject for RawJsonObject<'s> {
-    fn write_into(&self, dest: &mut String) {
+impl<'s> JsonValue for RawJsonObject<'s> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
         dest.push_str(self.as_str());
     }
 }
 
 pub struct JsonNullValue;
 
-impl JsonObject for JsonNullValue {
-    fn write_into(&self, dest: &mut String) {
+impl JsonValue for JsonNullValue {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
         dest.push_str("null");
     }
 }
 
 pub struct EmptyJsonArray;
 
-impl JsonObject for EmptyJsonArray {
-    fn write_into(&self, dest: &mut String) {
-        dest.push_str("[]");
+impl JsonValue for EmptyJsonArray {
+    const IS_ARRAY: bool = true;
+    fn write(&self, dest: &mut String) {
+        dest.push_str("");
     }
 }
 
-impl<T: JsonObject> JsonObject for Vec<T> {
-    fn write_into(&self, dest: &mut String) {
+impl<T: JsonValue> JsonValue for Vec<T> {
+    const IS_ARRAY: bool = true;
+    fn write(&self, dest: &mut String) {
         for (no, itm) in self.iter().enumerate() {
             if no > 0 {
                 dest.push(',');
             }
-            itm.write_into(dest);
+            itm.write(dest);
         }
     }
 }
 
-impl<'s, T: JsonObject> JsonObject for &'s [T] {
-    fn write_into(&self, dest: &mut String) {
+impl<'s, T: JsonValue> JsonValue for &'s [T] {
+    const IS_ARRAY: bool = true;
+    fn write(&self, dest: &mut String) {
         for (no, itm) in self.iter().enumerate() {
             if no > 0 {
                 dest.push(',');
             }
-            itm.write_into(dest);
+            itm.write(dest);
         }
     }
 }
 
-impl<'s, T: JsonObject> JsonObject for &'s Vec<T> {
-    fn write_into(&self, dest: &mut String) {
+impl<'s, T: JsonValue> JsonValue for &'s Vec<T> {
+    const IS_ARRAY: bool = true;
+    fn write(&self, dest: &mut String) {
         for (no, itm) in self.iter().enumerate() {
             if no > 0 {
                 dest.push(',');
             }
-            itm.write_into(dest);
+            itm.write(dest);
         }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::json_writer::JsonArrayWriter;
+    use crate::json_writer::{JsonArrayWriter, JsonObjectWriter};
 
     #[test]
     fn test_array_of_numbers() {
@@ -220,5 +242,13 @@ mod test {
         let result = array.write(a).build();
 
         assert_eq!(result, r#"["1","2","3"]"#);
+    }
+
+    #[test]
+    fn test_write_array_to_object() {
+        let a = vec!["1", "2", "3"];
+        let result = JsonObjectWriter::new().write("test", a).build();
+
+        assert_eq!(result, r#"{"test":["1","2","3"]}"#);
     }
 }
