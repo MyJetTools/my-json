@@ -184,30 +184,15 @@ impl JsonObjectWriter {
     }
 
     pub fn write_if_some_ref<TJsonValue: JsonValueWriter>(
-        mut self,
+        self,
         key: &str,
-        value: Option<&TJsonValue>,
+        value: &Option<TJsonValue>,
     ) -> Self {
         let Some(value) = value else {
             return self;
         };
 
-        self.add_delimiter();
-        self.write_key(key);
-
-        let raw = self.raw.as_mut().unwrap();
-
-        if TJsonValue::IS_ARRAY {
-            raw.push('[');
-        }
-
-        value.write(raw);
-
-        if TJsonValue::IS_ARRAY {
-            raw.push(']');
-        }
-
-        self
+        self.write_ref(key, value)
     }
 
     pub fn build(mut self) -> String {
