@@ -45,10 +45,10 @@ impl JsonObjectWriter {
     }
 
     pub fn write_json_object(
-        &mut self,
+        mut self,
         key: &str,
-        write_object: impl Fn(&mut JsonObjectWriter) -> (),
-    ) {
+        write_object: impl Fn(JsonObjectWriter) -> JsonObjectWriter,
+    ) -> Self {
         self.add_delimiter();
         self.write_key(key);
 
@@ -56,35 +56,37 @@ impl JsonObjectWriter {
 
         let mut json_object_writer = Self::from_string(raw);
 
-        write_object(&mut json_object_writer);
+        json_object_writer = write_object(json_object_writer);
 
         let raw = json_object_writer.build();
         self.raw = Some(raw);
+
+        self
     }
 
     pub fn write_json_array(
-        &mut self,
+        mut self,
         key: &str,
-        write_array: impl Fn(&mut JsonArrayWriter) -> (),
-    ) {
+        write_array: impl Fn(JsonArrayWriter) -> JsonArrayWriter,
+    ) -> Self {
         self.add_delimiter();
         self.write_key(key);
 
         let raw = self.raw.take().unwrap();
 
-        let mut json_array_writer = JsonArrayWriter::from_string(raw);
-
-        write_array(&mut json_array_writer);
+        let json_array_writer = write_array(JsonArrayWriter::from_string(raw));
 
         let raw = json_array_writer.build();
         self.raw = Some(raw);
+        self
     }
 
-    pub fn write(&mut self, key: &str, value: impl JsonObject) {
+    pub fn write(mut self, key: &str, value: impl JsonObject) -> Self {
         self.add_delimiter();
         self.write_key(key);
 
         value.write_into(self.raw.as_mut().unwrap());
+        self
     }
 
     pub fn build(mut self) -> String {
@@ -115,27 +117,21 @@ mod tests {
 
     #[test]
     fn basic_test() {
-        let mut json_write = super::JsonObjectWriter::new();
-
-        json_write.write("key", "value");
-
-        json_write.write("key2", "'value'");
-
-        let result = json_write.build();
+        let result = super::JsonObjectWriter::new()
+            .write("key", "value")
+            .write("key2", "'value'")
+            .build();
 
         assert_eq!("{\"key\":\"value\",\"key2\":\"\'value\'\"}", result);
     }
 
     #[test]
     fn test_nested_object_write() {
-        let mut json_writer = super::JsonObjectWriter::new();
-
-        json_writer.write("key1", "value1");
-
-        json_writer.write_json_object("key2", |json_writer| {
-            json_writer.write("key3", "value3");
-            json_writer.write("key4", 54);
-        });
+        let json_writer = super::JsonObjectWriter::new()
+            .write("key1", "value1")
+            .write_json_object("key2", |json_writer| {
+                json_writer.write("key3", "value3").write("key4", 54)
+            });
 
         let result = json_writer.build();
 
@@ -144,23 +140,18 @@ mod tests {
 
     #[test]
     fn test_nested_array_write() {
-        let mut json_writer = super::JsonObjectWriter::new();
-
-        json_writer.write("key1", "value1");
-
-        json_writer.write_json_array("key2", |json_array_writer| {
-            json_array_writer.write_json_object(|json_object| {
-                json_object.write("key3", "value3");
-                json_object.write("key4", 54);
-            });
-
-            json_array_writer.write_json_object(|json_object| {
-                json_object.write("key3", "value5");
-                json_object.write("key4", 55);
-            });
-        });
-
-        let result = json_writer.build();
+        let result = super::JsonObjectWriter::new()
+            .write("key1", "value1")
+            .write_json_array("key2", |json_array_writer| {
+                json_array_writer
+                    .write_json_object(|json_object| {
+                        json_object.write("key3", "value3").write("key4", 54)
+                    })
+                    .write_json_object(|json_object| {
+                        json_object.write("key3", "value5").write("key4", 55)
+                    })
+            })
+            .build();
 
         assert_eq!("{\"key1\":\"value1\",\"key2\":[{\"key3\":\"value3\",\"key4\":54},{\"key3\":\"value5\",\"key4\":55}]}", result.as_str());
     }

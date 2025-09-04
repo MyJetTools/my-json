@@ -32,9 +32,10 @@ impl JsonArrayWriter {
         }
     }
 
-    pub fn write_null_element(&mut self) {
+    pub fn write_null_element(mut self) -> Self {
         self.add_delimiter();
         self.raw.as_mut().unwrap().push_str("null");
+        self
     }
 
     pub fn build(mut self) -> String {
@@ -43,23 +44,27 @@ impl JsonArrayWriter {
         raw
     }
 
-    pub fn write(&mut self, value: impl JsonObject) {
+    pub fn write(mut self, value: impl JsonObject) -> Self {
         self.add_delimiter();
         let raw = self.raw.as_mut().unwrap();
         value.write_into(raw);
+        self
     }
 
-    pub fn write_json_object(&mut self, write_object: impl Fn(&mut JsonObjectWriter) -> ()) {
+    pub fn write_json_object(
+        mut self,
+        write_object: impl Fn(JsonObjectWriter) -> JsonObjectWriter,
+    ) -> Self {
         self.add_delimiter();
 
         let raw = self.raw.take().unwrap();
 
-        let mut json_object_writer = JsonObjectWriter::from_string(raw);
-
-        write_object(&mut json_object_writer);
+        let json_object_writer = write_object(JsonObjectWriter::from_string(raw));
 
         let raw = json_object_writer.build();
         self.raw = Some(raw);
+
+        self
     }
 
     pub fn build_into(&self, dest: &mut String) {
@@ -84,19 +89,14 @@ mod tests {
 
     #[test]
     fn test_array_write() {
-        let mut json_array_writer = super::JsonArrayWriter::new();
-
-        json_array_writer.write_json_object(|json_object| {
-            json_object.write("key1", "value1");
-            json_object.write("key2", "value2");
-        });
-
-        json_array_writer.write_json_object(|json_object| {
-            json_object.write("key1", "value1");
-            json_object.write("key2", "value2");
-        });
-
-        let result = json_array_writer.build();
+        let result = super::JsonArrayWriter::new()
+            .write_json_object(|json_object| {
+                json_object.write("key1", "value1").write("key2", "value2")
+            })
+            .write_json_object(|json_object| {
+                json_object.write("key1", "value1").write("key2", "value2")
+            })
+            .build();
 
         assert_eq!(
             result,
