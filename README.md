@@ -282,6 +282,19 @@ println!("{}", json);
 // Output: ["string_value",42,true,{"key":"value"}]
 ```
 
+#### Empty Arrays
+
+```rust
+use my_json::json_writer::{JsonObjectWriter, EmptyJsonArray};
+
+// Use EmptyJsonArray to write an empty array as a value
+let json = JsonObjectWriter::new()
+    .write("array", EmptyJsonArray)
+    .build();
+
+assert_eq!(json, r#"{"array":[]}"#);
+```
+
 #### Nested Arrays
 
 ```rust

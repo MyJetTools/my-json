@@ -87,6 +87,7 @@ impl JsonValueWriter for JsonArrayWriter {
 
 #[cfg(test)]
 mod tests {
+    use crate::json_writer::EmptyJsonArray;
 
     #[test]
     fn test_array_write() {
@@ -128,5 +129,14 @@ mod tests {
             .build();
 
         assert_eq!(r#"{"array":[{"key1":"value1","key2":"value2"}]}"#, result);
+    }
+
+    #[test]
+    fn test_empty_array() {
+        let result = super::JsonObjectWriter::new()
+            .write("array", EmptyJsonArray)
+            .build();
+
+        assert_eq!(r#"{"array":[]}"#, result);
     }
 }
