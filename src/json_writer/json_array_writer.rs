@@ -1,4 +1,4 @@
-use super::{JsonObjectWriter, JsonValue};
+use super::*;
 
 pub struct JsonArrayWriter {
     raw: Option<String>,
@@ -44,7 +44,7 @@ impl JsonArrayWriter {
         raw
     }
 
-    pub fn write(mut self, value: impl JsonValue) -> Self {
+    pub fn write(mut self, value: impl JsonValueWriter) -> Self {
         self.add_delimiter();
         let raw = self.raw.as_mut().unwrap();
         value.write(raw);
@@ -78,7 +78,7 @@ impl JsonArrayWriter {
     }
 }
 
-impl JsonValue for JsonArrayWriter {
+impl JsonValueWriter for JsonArrayWriter {
     const IS_ARRAY: bool = true;
     fn write(&self, dest: &mut String) {
         self.build_into(dest)
@@ -103,5 +103,30 @@ mod tests {
             result,
             "[{\"key1\":\"value1\",\"key2\":\"value2\"},{\"key1\":\"value1\",\"key2\":\"value2\"}]"
         );
+    }
+
+    #[test]
+    fn test_array_write_to_object() {
+        let result = super::JsonObjectWriter::new()
+            .write_json_array("array", |array_writer| {
+                array_writer.write_json_object(|json_object| {
+                    json_object.write("key1", "value1").write("key2", "value2")
+                })
+            })
+            .build();
+
+        assert_eq!(r#"{"array":[{"key1":"value1","key2":"value2"}]}"#, result);
+    }
+
+    #[test]
+    fn test_array_write_to_object_2() {
+        let json_object = super::JsonObjectWriter::new()
+            .write("key1", "value1")
+            .write("key2", "value2");
+        let result = super::JsonObjectWriter::new()
+            .write("array", vec![json_object])
+            .build();
+
+        assert_eq!(r#"{"array":[{"key1":"value1","key2":"value2"}]}"#, result);
     }
 }

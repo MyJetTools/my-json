@@ -1,83 +1,83 @@
-use super::JsonValue;
+use super::JsonValueWriter;
 
-impl JsonValue for u8 {
+impl JsonValueWriter for u8 {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonValue for i8 {
+impl JsonValueWriter for i8 {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonValue for u16 {
+impl JsonValueWriter for u16 {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonValue for i16 {
+impl JsonValueWriter for i16 {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonValue for u32 {
+impl JsonValueWriter for u32 {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonValue for i32 {
+impl JsonValueWriter for i32 {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonValue for u64 {
+impl JsonValueWriter for u64 {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonValue for i64 {
+impl JsonValueWriter for i64 {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonValue for usize {
+impl JsonValueWriter for usize {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonValue for isize {
+impl JsonValueWriter for isize {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonValue for f64 {
+impl JsonValueWriter for f64 {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonValue for f32 {
+impl JsonValueWriter for f32 {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
@@ -85,13 +85,13 @@ impl JsonValue for f32 {
 }
 
 #[cfg(feature = "decimal")]
-impl JsonValue for rust_decimal::Decimal {
+impl JsonValueWriter for rust_decimal::Decimal {
     fn write_into(&self, dest: &mut String) {
         dest.push_str(self.to_string().as_str());
     }
 }
 
-impl JsonValue for bool {
+impl JsonValueWriter for bool {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         if *self {
@@ -102,7 +102,7 @@ impl JsonValue for bool {
     }
 }
 
-impl JsonValue for String {
+impl JsonValueWriter for String {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push('"');
@@ -111,7 +111,7 @@ impl JsonValue for String {
     }
 }
 
-impl<'s> JsonValue for &'s str {
+impl<'s> JsonValueWriter for &'s str {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push('"');
@@ -120,7 +120,7 @@ impl<'s> JsonValue for &'s str {
     }
 }
 
-impl<'s> JsonValue for &'s String {
+impl<'s> JsonValueWriter for &'s String {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push('"');
@@ -159,7 +159,7 @@ impl<'s> Into<RawJsonObject<'s>> for String {
     }
 }
 
-impl<'s> JsonValue for RawJsonObject<'s> {
+impl<'s> JsonValueWriter for RawJsonObject<'s> {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str(self.as_str());
@@ -168,7 +168,7 @@ impl<'s> JsonValue for RawJsonObject<'s> {
 
 pub struct JsonNullValue;
 
-impl JsonValue for JsonNullValue {
+impl JsonValueWriter for JsonNullValue {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         dest.push_str("null");
@@ -177,14 +177,14 @@ impl JsonValue for JsonNullValue {
 
 pub struct EmptyJsonArray;
 
-impl JsonValue for EmptyJsonArray {
+impl JsonValueWriter for EmptyJsonArray {
     const IS_ARRAY: bool = true;
     fn write(&self, dest: &mut String) {
         dest.push_str("");
     }
 }
 
-impl<T: JsonValue> JsonValue for Vec<T> {
+impl<T: JsonValueWriter> JsonValueWriter for Vec<T> {
     const IS_ARRAY: bool = true;
     fn write(&self, dest: &mut String) {
         for (no, itm) in self.iter().enumerate() {
@@ -196,7 +196,7 @@ impl<T: JsonValue> JsonValue for Vec<T> {
     }
 }
 
-impl<'s, T: JsonValue> JsonValue for &'s [T] {
+impl<'s, T: JsonValueWriter> JsonValueWriter for &'s [T] {
     const IS_ARRAY: bool = true;
     fn write(&self, dest: &mut String) {
         for (no, itm) in self.iter().enumerate() {
@@ -208,7 +208,7 @@ impl<'s, T: JsonValue> JsonValue for &'s [T] {
     }
 }
 
-impl<'s, T: JsonValue> JsonValue for &'s Vec<T> {
+impl<'s, T: JsonValueWriter> JsonValueWriter for &'s Vec<T> {
     const IS_ARRAY: bool = true;
     fn write(&self, dest: &mut String) {
         for (no, itm) in self.iter().enumerate() {

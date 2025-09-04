@@ -1,4 +1,4 @@
-use super::{JsonArrayWriter, JsonValue};
+use super::*;
 
 pub struct JsonObjectWriter {
     first_element: bool,
@@ -81,7 +81,7 @@ impl JsonObjectWriter {
         self
     }
 
-    pub fn write<TJsonValue: JsonValue>(mut self, key: &str, value: TJsonValue) -> Self {
+    pub fn write<TJsonValue: JsonValueWriter>(mut self, key: &str, value: TJsonValue) -> Self {
         self.add_delimiter();
         self.write_key(key);
 
@@ -117,7 +117,7 @@ impl JsonObjectWriter {
     }
 }
 
-impl JsonValue for JsonObjectWriter {
+impl JsonValueWriter for JsonObjectWriter {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         self.build_into(dest)
