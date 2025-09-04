@@ -251,4 +251,13 @@ mod test {
 
         assert_eq!(result, r#"{"test":["1","2","3"]}"#);
     }
+
+    #[test]
+    fn test_write_array_to_object_as_iterator() {
+        let result = JsonObjectWriter::new()
+            .write_iter("test", ["1", "2", "3"].into_iter())
+            .build();
+
+        assert_eq!(result, r#"{"test":["1","2","3"]}"#);
+    }
 }

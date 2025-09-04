@@ -81,6 +81,43 @@ impl JsonObjectWriter {
         self
     }
 
+    pub fn write_iter<TJsonArrayWriter: JsonValueWriter>(
+        mut self,
+        key: &str,
+        write_array: impl Iterator<Item = TJsonArrayWriter>,
+    ) -> Self {
+        self.add_delimiter();
+        self.write_key(key);
+
+        let mut raw = self.raw.as_mut().unwrap();
+
+        raw.push('[');
+
+        let mut no = 0;
+        for itm in write_array {
+            if no > 0 {
+                raw.push(',');
+            }
+            itm.write(&mut raw);
+            no += 1;
+        }
+        raw.push(']');
+
+        self
+    }
+
+    pub fn write_iter_if_some<TJsonArrayWriter: JsonValueWriter>(
+        self,
+        key: &str,
+        write_array: Option<impl Iterator<Item = TJsonArrayWriter>>,
+    ) -> Self {
+        let Some(write_array) = write_array else {
+            return self;
+        };
+
+        self.write_iter(key, write_array)
+    }
+
     pub fn write<TJsonValue: JsonValueWriter>(mut self, key: &str, value: TJsonValue) -> Self {
         self.add_delimiter();
         self.write_key(key);
