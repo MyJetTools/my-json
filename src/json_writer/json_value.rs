@@ -164,3 +164,61 @@ impl JsonObject for EmptyJsonArray {
         dest.push_str("[]");
     }
 }
+
+impl<T: JsonObject> JsonObject for Vec<T> {
+    fn write_into(&self, dest: &mut String) {
+        for (no, itm) in self.iter().enumerate() {
+            if no > 0 {
+                dest.push(',');
+            }
+            itm.write_into(dest);
+        }
+    }
+}
+
+impl<'s, T: JsonObject> JsonObject for &'s [T] {
+    fn write_into(&self, dest: &mut String) {
+        for (no, itm) in self.iter().enumerate() {
+            if no > 0 {
+                dest.push(',');
+            }
+            itm.write_into(dest);
+        }
+    }
+}
+
+impl<'s, T: JsonObject> JsonObject for &'s Vec<T> {
+    fn write_into(&self, dest: &mut String) {
+        for (no, itm) in self.iter().enumerate() {
+            if no > 0 {
+                dest.push(',');
+            }
+            itm.write_into(dest);
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::json_writer::JsonArrayWriter;
+
+    #[test]
+    fn test_array_of_numbers() {
+        let a = vec![1, 2, 3];
+
+        let array = JsonArrayWriter::new();
+        let result = array.write(a).build();
+
+        assert_eq!(result, "[1,2,3]");
+    }
+
+    #[test]
+    fn test_array_of_strings() {
+        let a = vec!["1", "2", "3"];
+
+        let array = JsonArrayWriter::new();
+        let result = array.write(a).build();
+
+        assert_eq!(result, r#"["1","2","3"]"#);
+    }
+}
