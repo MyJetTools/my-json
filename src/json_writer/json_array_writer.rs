@@ -51,6 +51,41 @@ impl JsonArrayWriter {
         self
     }
 
+    pub fn write_ref(mut self, value: &impl JsonValueWriter) -> Self {
+        self.add_delimiter();
+        let raw = self.raw.as_mut().unwrap();
+        value.write(raw);
+        self
+    }
+
+    pub fn write_iter<TJsonValueWriter: JsonValueWriter>(
+        mut self,
+        values: impl Iterator<Item = TJsonValueWriter>,
+    ) -> Self {
+        self.add_delimiter();
+        let raw = self.raw.as_mut().unwrap();
+
+        for itm in values {
+            itm.write(raw);
+        }
+
+        self
+    }
+
+    pub fn write_slice<TJsonValueWriter: JsonValueWriter>(
+        mut self,
+        values: &[TJsonValueWriter],
+    ) -> Self {
+        self.add_delimiter();
+        let raw = self.raw.as_mut().unwrap();
+
+        for itm in values {
+            itm.write(raw);
+        }
+
+        self
+    }
+
     pub fn write_json_object(
         mut self,
         write_object: impl Fn(JsonObjectWriter) -> JsonObjectWriter,
