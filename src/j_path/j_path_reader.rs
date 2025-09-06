@@ -27,7 +27,8 @@ impl<'s> JPathReader<'s> {
 
 pub enum JPropName<'s> {
     Name(&'s str),
-    Array { j_prop_name: &'s str, index: usize },
+    ArrayAndIndex { j_prop_name: &'s str, index: usize },
+    Array(&'s str),
 }
 
 impl<'s> JPropName<'s> {
@@ -35,11 +36,15 @@ impl<'s> JPropName<'s> {
         if name.ends_with(']') {
             let index = name.rfind('[').unwrap();
 
+            if index == name.len() - 2 {
+                return Self::Array(&name[..name.len() - 2]);
+            }
+
             let j_prop_name = &name[..index];
 
             let index = name[index + 1..name.len() - 1].parse::<usize>().unwrap();
 
-            return Self::Array { j_prop_name, index };
+            return Self::ArrayAndIndex { j_prop_name, index };
         }
 
         Self::Name(name)
@@ -49,6 +54,16 @@ impl<'s> JPropName<'s> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_array_name_without_index() {
+        let prop_name = JPropName::new("array[]");
+
+        match prop_name {
+            JPropName::Array(name) => assert_eq!(name, "array"),
+            _ => panic!("Expected Array variant"),
+        }
+    }
 
     #[test]
     fn test_j_path_reader_simple_path() {
@@ -110,7 +125,7 @@ mod tests {
     fn test_j_prop_name_array() {
         let prop_name = JPropName::new("array[0]");
         match prop_name {
-            JPropName::Array { j_prop_name, index } => {
+            JPropName::ArrayAndIndex { j_prop_name, index } => {
                 assert_eq!(j_prop_name, "array");
                 assert_eq!(index, 0);
             }
@@ -122,7 +137,7 @@ mod tests {
     fn test_j_prop_name_array_large_index() {
         let prop_name = JPropName::new("items[999]");
         match prop_name {
-            JPropName::Array { j_prop_name, index } => {
+            JPropName::ArrayAndIndex { j_prop_name, index } => {
                 assert_eq!(j_prop_name, "items");
                 assert_eq!(index, 999);
             }
@@ -134,7 +149,7 @@ mod tests {
     fn test_j_prop_name_array_zero_index() {
         let prop_name = JPropName::new("list[0]");
         match prop_name {
-            JPropName::Array { j_prop_name, index } => {
+            JPropName::ArrayAndIndex { j_prop_name, index } => {
                 assert_eq!(j_prop_name, "list");
                 assert_eq!(index, 0);
             }

@@ -94,4 +94,17 @@ impl<'s> JsonValueRef<'s> {
     pub fn as_date_time(&'s self) -> Option<DateTimeAsMicroseconds> {
         self.data.as_date_time(&self.json_slice)
     }
+
+    pub fn j_query_as_value(
+        &'s self,
+        path: &str,
+    ) -> Result<Option<JsonValueRef<'s>>, JsonParseError> {
+        let data = &self.json_slice[self.data.start..self.data.end];
+        return crate::j_path::get_value(data, path);
+    }
+
+    pub fn j_query_as_vec(&'s self, path: &str) -> Result<Vec<JsonValueRef<'s>>, JsonParseError> {
+        let data = &self.json_slice[self.data.start..self.data.end];
+        return crate::j_path::get_value_as_vec(data, path);
+    }
 }

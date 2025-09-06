@@ -1,6 +1,19 @@
+use rust_extensions::StrOrString;
+
 use crate::json_reader::{JsonArrayIterator, JsonFirstLineIterator, JsonParseError, JsonValueRef};
 
-pub fn j_path<'s>(json: &'s [u8], path: &str) -> Result<Option<JsonValueRef<'s>>, JsonParseError> {
+pub fn get_value<'s, 'd>(
+    json: &'s [u8],
+    path: impl Into<StrOrString<'d>>,
+) -> Result<Option<JsonValueRef<'s>>, JsonParseError> {
+    let path: StrOrString = path.into();
+
+    j_path_internal(json, path.as_str())
+}
+fn j_path_internal<'s>(
+    json: &'s [u8],
+    path: &str,
+) -> Result<Option<JsonValueRef<'s>>, JsonParseError> {
     if path.is_empty() {
         return Ok(None);
     }
@@ -21,7 +34,7 @@ pub fn j_path<'s>(json: &'s [u8], path: &str) -> Result<Option<JsonValueRef<'s>>
                     match j_path_reader.get_next_level_path() {
                         Some(next_level_path) => {
                             let data = &json[value.data.start..value.data.end];
-                            return j_path(data, next_level_path);
+                            return j_path_internal(data, next_level_path);
                         }
                         None => {
                             return Ok(Some(JsonValueRef {
@@ -33,7 +46,7 @@ pub fn j_path<'s>(json: &'s [u8], path: &str) -> Result<Option<JsonValueRef<'s>>
                 }
             }
         }
-        super::JPropName::Array { j_prop_name, index } => {
+        super::JPropName::ArrayAndIndex { j_prop_name, index } => {
             while let Some(next) = reader.get_next() {
                 let (key, value) = next.unwrap();
 
@@ -53,12 +66,15 @@ pub fn j_path<'s>(json: &'s [u8], path: &str) -> Result<Option<JsonValueRef<'s>>
                 }
             }
         }
+        super::JPropName::Array(_) => {
+            return Err(JsonParseError::Other("Result is array".to_string()))
+        }
     }
 
     Ok(None)
 }
 
-fn find_object_from_array<'s>(
+pub(crate) fn find_object_from_array<'s>(
     json: &'s [u8],
     next_path: &str,
     index: usize,
@@ -78,7 +94,7 @@ fn find_object_from_array<'s>(
             }
 
             let json = &json[array_item.data.start..array_item.data.end];
-            return j_path(json, next_path);
+            return j_path_internal(json, next_path);
         }
 
         i += 1;
@@ -94,15 +110,21 @@ mod tests {
     fn test_basic_case() {
         let json = r#"{"key1": "value1", "key2": "value2", "object": { "key":"value" }}"#;
 
-        let result = super::j_path(json.as_bytes(), "key1").unwrap().unwrap();
+        let result = crate::j_path::get_value(json.as_bytes(), "key1")
+            .unwrap()
+            .unwrap();
 
         assert_eq!(result.as_str().unwrap().as_str(), "value1");
 
-        let result = super::j_path(json.as_bytes(), "key2").unwrap().unwrap();
+        let result = crate::j_path::get_value(json.as_bytes(), "key2")
+            .unwrap()
+            .unwrap();
 
         assert_eq!(result.as_str().unwrap().as_str(), "value2");
 
-        let result = super::j_path(json.as_bytes(), "object").unwrap().unwrap();
+        let result = crate::j_path::get_value(json.as_bytes(), "object")
+            .unwrap()
+            .unwrap();
 
         assert!(result.is_object());
     }
@@ -111,7 +133,7 @@ mod tests {
     fn test_basic_case_inside_object() {
         let json = r#"{"key1": "value1", "key2": "value2", "object": { "key":"value" }}"#;
 
-        let result = super::j_path(json.as_bytes(), "object.key")
+        let result = crate::j_path::get_value(json.as_bytes(), "object.key")
             .unwrap()
             .unwrap();
 
@@ -123,7 +145,7 @@ mod tests {
         let json =
             r#"{"key1": "value1", "key2": "value2", "object": { "key":{ "key2":"value2" } }}"#;
 
-        let result = super::j_path(json.as_bytes(), "object.key.key2")
+        let result = crate::j_path::get_value(json.as_bytes(), "object.key.key2")
             .unwrap()
             .unwrap();
 
@@ -134,13 +156,13 @@ mod tests {
     fn test_with_array() {
         let json = r#"{ "key1":"value1", "key2":"value2", "array":[{"key":"a0"},{"key":"a1"},{"key":"a2"}] }"#;
 
-        let result = super::j_path(json.as_bytes(), "array[1].key")
+        let result = crate::j_path::get_value(json.as_bytes(), "array[1].key")
             .unwrap()
             .unwrap();
 
         assert_eq!(result.as_str().unwrap().as_str(), "a1");
 
-        let result = super::j_path(json.as_bytes(), "array[2].key")
+        let result = crate::j_path::get_value(json.as_bytes(), "array[2].key")
             .unwrap()
             .unwrap();
 
@@ -151,51 +173,54 @@ mod tests {
     #[test]
     fn test_empty_path() {
         let json = r#"{"key": "value"}"#;
-        let result = super::j_path(json.as_bytes(), "").unwrap();
+        let result = crate::j_path::get_value(json.as_bytes(), "").unwrap();
         assert!(result.is_none());
     }
 
     #[test]
     fn test_nonexistent_path() {
         let json = r#"{"key": "value"}"#;
-        let result = super::j_path(json.as_bytes(), "nonexistent").unwrap();
+        let result = crate::j_path::get_value(json.as_bytes(), "nonexistent").unwrap();
         assert!(result.is_none());
     }
 
     #[test]
     fn test_nonexistent_nested_path() {
         let json = r#"{"user": {"name": "Alice"}}"#;
-        let result = super::j_path(json.as_bytes(), "user.age").unwrap();
+        let result = crate::j_path::get_value(json.as_bytes(), "user.age").unwrap();
         assert!(result.is_none());
     }
 
     #[test]
     fn test_nonexistent_array_index() {
         let json = r#"{"array": [1, 2, 3]}"#;
-        let result = super::j_path(json.as_bytes(), "array[5]").unwrap();
+        let result = crate::j_path::get_value(json.as_bytes(), "array[5]").unwrap();
         assert!(result.is_none());
     }
 
     #[test]
     fn test_array_without_index() {
         let json = r#"{"array": [1, 2, 3]}"#;
-        let result = super::j_path(json.as_bytes(), "array").unwrap().unwrap();
+        let result = crate::j_path::get_value(json.as_bytes(), "array")
+            .unwrap()
+            .unwrap();
         assert!(result.is_array());
     }
 
     #[test]
     fn test_deep_nesting() {
         let json = r#"{"level1": {"level2": {"level3": {"level4": {"level5": "deep_value"}}}}}"#;
-        let result = super::j_path(json.as_bytes(), "level1.level2.level3.level4.level5")
-            .unwrap()
-            .unwrap();
+        let result =
+            crate::j_path::get_value(json.as_bytes(), "level1.level2.level3.level4.level5")
+                .unwrap()
+                .unwrap();
         assert_eq!(result.as_str().unwrap().as_str(), "deep_value");
     }
 
     #[test]
     fn test_array_in_object() {
         let json = r#"{"user": {"hobbies": ["reading", "gaming", "coding"]}}"#;
-        let result = super::j_path(json.as_bytes(), "user.hobbies[1]")
+        let result = crate::j_path::get_value(json.as_bytes(), "user.hobbies[1]")
             .unwrap()
             .unwrap();
         assert_eq!(result.as_str().unwrap().as_str(), "gaming");
@@ -204,12 +229,12 @@ mod tests {
     #[test]
     fn test_object_in_array() {
         let json = r#"{"users": [{"name": "Alice", "age": 25}, {"name": "Bob", "age": 30}]}"#;
-        let result = super::j_path(json.as_bytes(), "users[0].name")
+        let result = crate::j_path::get_value(json.as_bytes(), "users[0].name")
             .unwrap()
             .unwrap();
         assert_eq!(result.as_str().unwrap().as_str(), "Alice");
 
-        let result = super::j_path(json.as_bytes(), "users[1].age")
+        let result = crate::j_path::get_value(json.as_bytes(), "users[1].age")
             .unwrap()
             .unwrap();
         assert!(result.is_number());
@@ -226,25 +251,35 @@ mod tests {
             "object": {"key": "value"}
         }"#;
 
-        let string_val = super::j_path(json.as_bytes(), "string").unwrap().unwrap();
+        let string_val = crate::j_path::get_value(json.as_bytes(), "string")
+            .unwrap()
+            .unwrap();
         assert!(string_val.is_string());
         assert_eq!(string_val.as_str().unwrap().as_str(), "hello");
 
-        let number_val = super::j_path(json.as_bytes(), "number").unwrap().unwrap();
+        let number_val = crate::j_path::get_value(json.as_bytes(), "number")
+            .unwrap()
+            .unwrap();
         assert!(number_val.is_number());
 
-        let bool_val = super::j_path(json.as_bytes(), "boolean").unwrap().unwrap();
+        let bool_val = crate::j_path::get_value(json.as_bytes(), "boolean")
+            .unwrap()
+            .unwrap();
         assert!(bool_val.is_bool());
 
-        let null_val = super::j_path(json.as_bytes(), "null_value")
+        let null_val = crate::j_path::get_value(json.as_bytes(), "null_value")
             .unwrap()
             .unwrap();
         assert!(null_val.is_null());
 
-        let array_val = super::j_path(json.as_bytes(), "array").unwrap().unwrap();
+        let array_val = crate::j_path::get_value(json.as_bytes(), "array")
+            .unwrap()
+            .unwrap();
         assert!(array_val.is_array());
 
-        let object_val = super::j_path(json.as_bytes(), "object").unwrap().unwrap();
+        let object_val = crate::j_path::get_value(json.as_bytes(), "object")
+            .unwrap()
+            .unwrap();
         assert!(object_val.is_object());
     }
 
@@ -272,23 +307,23 @@ mod tests {
         }"#;
 
         // Test deep nested access
-        let company_name = super::j_path(json.as_bytes(), "company.name")
+        let company_name = crate::j_path::get_value(json.as_bytes(), "company.name")
             .unwrap()
             .unwrap();
         assert_eq!(company_name.as_str().unwrap().as_str(), "TechCorp");
 
-        let dept_name = super::j_path(json.as_bytes(), "company.departments[0].name")
+        let dept_name = crate::j_path::get_value(json.as_bytes(), "company.departments[0].name")
             .unwrap()
             .unwrap();
         assert_eq!(dept_name.as_str().unwrap().as_str(), "Engineering");
 
         let employee_name =
-            super::j_path(json.as_bytes(), "company.departments[0].employees[1].name")
+            crate::j_path::get_value(json.as_bytes(), "company.departments[0].employees[1].name")
                 .unwrap()
                 .unwrap();
         assert_eq!(employee_name.as_str().unwrap().as_str(), "Jane");
 
-        let skills = super::j_path(
+        let skills = crate::j_path::get_value(
             json.as_bytes(),
             "company.departments[0].employees[0].skills[0]",
         )
@@ -301,17 +336,17 @@ mod tests {
     fn test_unicode_and_special_chars() {
         let json = r#"{"user": {"name": "José", "email": "test@example.com", "message": "Hello, World! 你好"}}"#;
 
-        let name = super::j_path(json.as_bytes(), "user.name")
+        let name = crate::j_path::get_value(json.as_bytes(), "user.name")
             .unwrap()
             .unwrap();
         assert_eq!(name.as_str().unwrap().as_str(), "José");
 
-        let email = super::j_path(json.as_bytes(), "user.email")
+        let email = crate::j_path::get_value(json.as_bytes(), "user.email")
             .unwrap()
             .unwrap();
         assert_eq!(email.as_str().unwrap().as_str(), "test@example.com");
 
-        let message = super::j_path(json.as_bytes(), "user.message")
+        let message = crate::j_path::get_value(json.as_bytes(), "user.message")
             .unwrap()
             .unwrap();
         assert_eq!(message.as_str().unwrap().as_str(), "Hello, World! 你好");
@@ -326,7 +361,7 @@ mod tests {
             }
         }"#;
 
-        let result = super::j_path(json.as_bytes(), "nested.deep")
+        let result = crate::j_path::get_value(json.as_bytes(), "nested.deep")
             .unwrap()
             .unwrap();
         assert_eq!(result.as_str().unwrap().as_str(), "nested_value");
@@ -336,12 +371,12 @@ mod tests {
     fn test_empty_arrays_and_objects() {
         let json = r#"{"empty_array": [], "empty_object": {}}"#;
 
-        let empty_array = super::j_path(json.as_bytes(), "empty_array")
+        let empty_array = crate::j_path::get_value(json.as_bytes(), "empty_array")
             .unwrap()
             .unwrap();
         assert!(empty_array.is_array());
 
-        let empty_object = super::j_path(json.as_bytes(), "empty_object")
+        let empty_object = crate::j_path::get_value(json.as_bytes(), "empty_object")
             .unwrap()
             .unwrap();
         assert!(empty_object.is_object());
@@ -351,10 +386,14 @@ mod tests {
     fn test_numeric_keys() {
         let json = r#"{"123": "numeric_key", "0": "zero_key"}"#;
 
-        let numeric_key = super::j_path(json.as_bytes(), "123").unwrap().unwrap();
+        let numeric_key = crate::j_path::get_value(json.as_bytes(), "123")
+            .unwrap()
+            .unwrap();
         assert_eq!(numeric_key.as_str().unwrap().as_str(), "numeric_key");
 
-        let zero_key = super::j_path(json.as_bytes(), "0").unwrap().unwrap();
+        let zero_key = crate::j_path::get_value(json.as_bytes(), "0")
+            .unwrap()
+            .unwrap();
         assert_eq!(zero_key.as_str().unwrap().as_str(), "zero_key");
     }
 
@@ -362,10 +401,12 @@ mod tests {
     fn test_boolean_values() {
         let json = r#"{"true_val": true, "false_val": false}"#;
 
-        let true_val = super::j_path(json.as_bytes(), "true_val").unwrap().unwrap();
+        let true_val = crate::j_path::get_value(json.as_bytes(), "true_val")
+            .unwrap()
+            .unwrap();
         assert!(true_val.unwrap_as_bool().unwrap());
 
-        let false_val = super::j_path(json.as_bytes(), "false_val")
+        let false_val = crate::j_path::get_value(json.as_bytes(), "false_val")
             .unwrap()
             .unwrap();
         assert!(!false_val.unwrap_as_bool().unwrap());
@@ -375,7 +416,7 @@ mod tests {
     fn test_null_values() {
         let json = r#"{"null_field": null}"#;
 
-        let null_field = super::j_path(json.as_bytes(), "null_field")
+        let null_field = crate::j_path::get_value(json.as_bytes(), "null_field")
             .unwrap()
             .unwrap();
         assert!(null_field.is_null());
@@ -385,12 +426,12 @@ mod tests {
     fn test_large_numbers() {
         let json = r#"{"large_number": 1234567890123456789, "small_number": 0.001}"#;
 
-        let large_number = super::j_path(json.as_bytes(), "large_number")
+        let large_number = crate::j_path::get_value(json.as_bytes(), "large_number")
             .unwrap()
             .unwrap();
         assert!(large_number.is_number());
 
-        let small_number = super::j_path(json.as_bytes(), "small_number")
+        let small_number = crate::j_path::get_value(json.as_bytes(), "small_number")
             .unwrap()
             .unwrap();
         assert!(small_number.is_double());
@@ -402,7 +443,7 @@ mod tests {
         let json = r#"{"level0": {"level1": {"level2": {"level3": {"level4": {"level5": {"level6": {"level7": {"level8": {"level9": {"level10": "deep_value"}}}}}}}}}}}"#;
 
         // Test deep nesting
-        let result = super::j_path(
+        let result = crate::j_path::get_value(
             json.as_bytes(),
             "level0.level1.level2.level3.level4.level5.level6.level7.level8.level9.level10",
         )
@@ -416,15 +457,19 @@ mod tests {
         let json = r#"{"array": [1, 2, 3]}"#;
 
         // Test first element
-        let first = super::j_path(json.as_bytes(), "array[0]").unwrap().unwrap();
+        let first = crate::j_path::get_value(json.as_bytes(), "array[0]")
+            .unwrap()
+            .unwrap();
         assert!(first.is_number());
 
         // Test last element
-        let last = super::j_path(json.as_bytes(), "array[2]").unwrap().unwrap();
+        let last = crate::j_path::get_value(json.as_bytes(), "array[2]")
+            .unwrap()
+            .unwrap();
         assert!(last.is_number());
 
         // Test out of bounds
-        let out_of_bounds = super::j_path(json.as_bytes(), "array[3]").unwrap();
+        let out_of_bounds = crate::j_path::get_value(json.as_bytes(), "array[3]").unwrap();
         assert!(out_of_bounds.is_none());
     }
 
@@ -432,22 +477,34 @@ mod tests {
     fn test_mixed_array_types() {
         let json = r#"{"mixed": [1, "string", true, null, {"key": "value"}, [1, 2, 3]]}"#;
 
-        let number = super::j_path(json.as_bytes(), "mixed[0]").unwrap().unwrap();
+        let number = crate::j_path::get_value(json.as_bytes(), "mixed[0]")
+            .unwrap()
+            .unwrap();
         assert!(number.is_number());
 
-        let string = super::j_path(json.as_bytes(), "mixed[1]").unwrap().unwrap();
+        let string = crate::j_path::get_value(json.as_bytes(), "mixed[1]")
+            .unwrap()
+            .unwrap();
         assert!(string.is_string());
 
-        let boolean = super::j_path(json.as_bytes(), "mixed[2]").unwrap().unwrap();
+        let boolean = crate::j_path::get_value(json.as_bytes(), "mixed[2]")
+            .unwrap()
+            .unwrap();
         assert!(boolean.is_bool());
 
-        let null_val = super::j_path(json.as_bytes(), "mixed[3]").unwrap().unwrap();
+        let null_val = crate::j_path::get_value(json.as_bytes(), "mixed[3]")
+            .unwrap()
+            .unwrap();
         assert!(null_val.is_null());
 
-        let object = super::j_path(json.as_bytes(), "mixed[4]").unwrap().unwrap();
+        let object = crate::j_path::get_value(json.as_bytes(), "mixed[4]")
+            .unwrap()
+            .unwrap();
         assert!(object.is_object());
 
-        let array = super::j_path(json.as_bytes(), "mixed[5]").unwrap().unwrap();
+        let array = crate::j_path::get_value(json.as_bytes(), "mixed[5]")
+            .unwrap()
+            .unwrap();
         assert!(array.is_array());
     }
 }
