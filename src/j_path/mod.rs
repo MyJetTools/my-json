@@ -6,3 +6,5 @@ mod j_scheme_detection;
 pub use j_scheme_detection::*;
 mod as_vec;
 pub use as_vec::*;
+mod j_replace;
+pub use j_replace::*;
