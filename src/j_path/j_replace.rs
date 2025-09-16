@@ -5,7 +5,7 @@ use crate::{
     json_writer::JsonValueWriter,
 };
 
-pub fn j_replace<'s, 'd>(
+pub fn j_update<'s, 'd>(
     json: &'s str,
     path: impl Into<StrOrString<'d>>,
     value_to_replace: impl JsonValueWriter,
@@ -43,6 +43,8 @@ fn j_replace_internal<'s>(
 
     let mut index = 0;
 
+    let mut value_injected = false;
+
     match j_prop_name {
         super::JPropName::Name(j_prop_name) => {
             while let Some(next) = reader.get_next() {
@@ -67,6 +69,7 @@ fn j_replace_internal<'s>(
                             j_replace_internal(data, next_level_path, result, value_to_replace)?;
                         }
                         None => {
+                            value_injected = true;
                             value_to_replace.write(result);
                         }
                     }
@@ -110,6 +113,20 @@ fn j_replace_internal<'s>(
         }
         super::JPropName::Array(_) => {
             return Err(JsonParseError::Other("Result is array".to_string()))
+        }
+    }
+
+    if j_path_reader.get_next_level_path().is_none() {
+        if !value_injected {
+            if index > 0 {
+                result.push(',');
+            }
+
+            result.push('"');
+            result.push_str(j_path_reader.get_prop_name().as_str());
+            result.push('"');
+            result.push(':');
+            value_to_replace.write(result);
         }
     }
 
@@ -161,15 +178,49 @@ mod test {
     "follow_up_commitments": []
 }"#;
 
-        let result = super::j_replace(json, "user_profile.name", "Ivan").unwrap();
+        let result = super::j_update(json, "user_profile.name", "Ivan").unwrap();
 
         println!("{}", result);
 
         println!("------");
 
-        let result =
-            super::j_replace(json, "user_profile.contact.email", "email@email.com").unwrap();
+        let result = super::j_update(
+            result.as_str(),
+            "user_profile.contact.email",
+            "email@email.com",
+        )
+        .unwrap();
 
         println!("{}", result);
+    }
+
+    #[test]
+    fn test_insert_to_not_existing_value() {
+        let json = r#"{
+    "user_profile": {"contact":{"email": null,"phone": null,"country_code_confirmed": null},"nationality": null,"time_zone": null}}"#;
+
+        let result = super::j_update(json, "user_profile.name", "Ivan").unwrap();
+
+        println!("{}", result);
+
+        let value = crate::j_path::get_value(result.as_bytes(), "user_profile.name")
+            .unwrap()
+            .unwrap();
+
+        assert_eq!("Ivan", value.as_str().unwrap().as_str());
+
+        println!("------");
+
+        let result = super::j_update(result.as_str(), "other_key", "OtherValue").unwrap();
+
+        let value = crate::j_path::get_value(result.as_bytes(), "other_key")
+            .unwrap()
+            .unwrap();
+
+        assert_eq!("OtherValue", value.as_str().unwrap().as_str());
+
+        println!("{}", result);
+
+        println!("------");
     }
 }
