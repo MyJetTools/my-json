@@ -30,7 +30,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIteratorInner<TArrayO
                 data,
                 initialized: Cell::new(false),
             }),
-            Err(result) => Err(JsonParseError::CanNotFineStartOfTheArrayObject(
+            Err(result) => Err(JsonParseError::CanNotFindStartOfTheArrayObject(
                 result.into_string(),
             )),
         }
@@ -75,7 +75,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIteratorInner<TArrayO
             let next_pos = match sync_reader::skip_white_spaces_and_get_next(&self.data) {
                 Ok(value) => value,
                 Err(err) => {
-                    return Some(Err(JsonParseError::CanNotFineStartOfTheArrayObject(
+                    return Some(Err(JsonParseError::CanNotFindStartOfTheArrayObject(
                         err.into_string(),
                     )))
                 }

@@ -39,7 +39,7 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReaderInner<TArra
 
             if let Err(err) = result {
                 let msg = err.into_string();
-                return Err(JsonParseError::CanNotFineStartOfTheJsonObject(msg));
+                return Err(JsonParseError::CanNotFindStartOfTheJsonObject(msg));
             }
             self.had_init.set(true);
         }

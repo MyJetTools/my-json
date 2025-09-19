@@ -1,7 +1,7 @@
 #[derive(Debug)]
 pub enum JsonParseError {
-    CanNotFineStartOfTheJsonObject(String),
-    CanNotFineStartOfTheArrayObject(String),
+    CanNotFindStartOfTheJsonObject(String),
+    CanNotFindStartOfTheArrayObject(String),
     Other(String),
 }
 
@@ -12,10 +12,10 @@ impl JsonParseError {
 
     pub fn to_string(&self) -> String {
         match self {
-            Self::CanNotFineStartOfTheJsonObject(msg) => {
+            Self::CanNotFindStartOfTheJsonObject(msg) => {
                 return format!("Can not find start of the json object. {}", msg)
             }
-            Self::CanNotFineStartOfTheArrayObject(msg) => {
+            Self::CanNotFindStartOfTheArrayObject(msg) => {
                 return format!("Can not find start of the array. {}", msg)
             }
             Self::Other(msg) => msg.to_string(),
@@ -24,8 +24,8 @@ impl JsonParseError {
 
     pub fn into_string(self) -> String {
         match self {
-            Self::CanNotFineStartOfTheJsonObject(msg) => msg,
-            Self::CanNotFineStartOfTheArrayObject(msg) => msg,
+            Self::CanNotFindStartOfTheJsonObject(msg) => msg,
+            Self::CanNotFindStartOfTheArrayObject(msg) => msg,
             Self::Other(msg) => msg,
         }
     }
