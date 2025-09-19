@@ -26,7 +26,7 @@ fn as_array_internal<'s>(
     match j_prop_name {
         super::JPropName::Name(j_prop_name) => {
             while let Some(next) = reader.get_next() {
-                let (key, value) = next.unwrap();
+                let (key, value) = next?;
 
                 let key = key.as_str()?;
 
@@ -48,7 +48,7 @@ fn as_array_internal<'s>(
         }
         super::JPropName::ArrayAndIndex { j_prop_name, index } => {
             while let Some(next) = reader.get_next() {
-                let (key, value) = next.unwrap();
+                let (key, value) = next?;
 
                 let key = key.as_str()?;
 
@@ -74,7 +74,7 @@ fn as_array_internal<'s>(
         }
         super::JPropName::Array(j_prop_name) => {
             while let Some(next) = reader.get_next() {
-                let (key, value) = next.unwrap();
+                let (key, value) = next?;
 
                 let key = key.as_str()?;
 
