@@ -295,7 +295,7 @@ impl JsonValue {
         ))
     }
 
-    pub fn as_str<'s>(&self, as_json_slice: &'s impl AsJsonSlice) -> Option<StrOrString<'s>> {
+    pub fn as_str<'s>(&'s self, as_json_slice: &'s impl AsJsonSlice) -> Option<StrOrString<'s>> {
         let slice = as_json_slice.as_slice()[self.start..self.end].as_ref();
 
         if crate::json_utils::is_null(slice) {
