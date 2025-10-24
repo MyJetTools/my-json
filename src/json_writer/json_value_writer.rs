@@ -252,6 +252,15 @@ impl<'s> JsonValueWriter for StrOrString<'s> {
     }
 }
 
+impl<'s> JsonValueWriter for &'s StrOrString<'s> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        dest.push('"');
+        crate::json_string_value::write_escaped_json_string_value(self.as_str(), dest);
+        dest.push('"');
+    }
+}
+
 impl JsonValueWriter for Option<String> {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
