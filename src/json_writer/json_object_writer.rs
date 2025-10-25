@@ -183,6 +183,19 @@ impl JsonObjectWriter {
         self
     }
 
+    pub fn write_if<TJsonValue: JsonValueWriter>(
+        self,
+        key: &str,
+        value: TJsonValue,
+        write_or_not: bool,
+    ) -> Self {
+        if !write_or_not {
+            return self;
+        }
+
+        self.write(key, value)
+    }
+
     pub fn write_if_some_ref<TJsonValue: JsonValueWriter>(
         self,
         key: &str,
