@@ -106,4 +106,55 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    pub fn test_empty_array() {
+        let json = "{}";
+
+        let json_array_iterator = JsonFirstLineIterator::new(json.as_bytes());
+
+        let mut items = 0;
+
+        while let Some(sub_json) = json_array_iterator.get_next() {
+            let _ = sub_json.unwrap();
+
+            items += 1;
+        }
+
+        assert_eq!(items, 0);
+    }
+
+    #[test]
+    pub fn test_empty_array_with_spaces_inside() {
+        let json = "{  }";
+
+        let json_array_iterator = JsonFirstLineIterator::new(json.as_bytes());
+
+        let mut items = 0;
+
+        while let Some(sub_json) = json_array_iterator.get_next() {
+            let _ = sub_json.unwrap();
+
+            items += 1;
+        }
+
+        assert_eq!(items, 0);
+    }
+
+    #[test]
+    pub fn test_empty_array_with_spaces_everywhere() {
+        let json = "  {  } ";
+
+        let json_array_iterator = JsonFirstLineIterator::new(json.as_bytes());
+
+        let mut items = 0;
+
+        while let Some(sub_json) = json_array_iterator.get_next() {
+            let _ = sub_json.unwrap();
+
+            items += 1;
+        }
+
+        assert_eq!(items, 0);
+    }
 }

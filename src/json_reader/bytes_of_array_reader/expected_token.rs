@@ -56,6 +56,10 @@ impl ExpectedToken for ExpectedJsonObjectKeyStart {
             return Ok(());
         }
 
+        if token == crate::consts::CLOSE_BRACKET {
+            return Ok(());
+        }
+
         Err(format!("{}", crate::consts::DOUBLE_QUOTE as char,))
     }
 }

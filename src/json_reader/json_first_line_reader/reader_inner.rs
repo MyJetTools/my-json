@@ -62,7 +62,12 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReaderInner<TArra
             &self.raw,
             ExpectedJsonObjectKeyStart,
         ) {
-            Ok(next_value) => next_value.pos,
+            Ok(next_value) => {
+                if next_value.value == crate::consts::CLOSE_BRACKET {
+                    return None;
+                }
+                next_value.pos
+            }
             Err(err) => return Some(Err(err)),
         };
 

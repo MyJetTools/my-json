@@ -150,7 +150,13 @@ pub fn find_the_end_of_json(src: &impl ArrayOfBytesIterator) -> Result<usize, Js
     loop {
         //let start = src.get_pos();
 
-        skip_white_spaces_and_peek_expected_token(src, ExpectedJsonObjectKeyStart)?;
+        let next_value =
+            skip_white_spaces_and_peek_expected_token(src, ExpectedJsonObjectKeyStart)?;
+
+        if next_value.value == crate::consts::CLOSE_BRACKET {
+            return Ok(next_value.pos);
+        }
+
         find_the_end_of_the_string(src)?;
 
         //println!(
