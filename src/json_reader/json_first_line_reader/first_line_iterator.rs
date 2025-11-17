@@ -108,7 +108,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_empty_array() {
+    pub fn test_empty_object() {
         let json = "{}";
 
         let json_array_iterator = JsonFirstLineIterator::new(json.as_bytes());
@@ -125,7 +125,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_empty_array_with_spaces_inside() {
+    pub fn test_empty_object_with_spaces_inside() {
         let json = "{  }";
 
         let json_array_iterator = JsonFirstLineIterator::new(json.as_bytes());
@@ -142,7 +142,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_empty_array_with_spaces_everywhere() {
+    pub fn test_empty_object_with_spaces_everywhere() {
         let json = "  {  } ";
 
         let json_array_iterator = JsonFirstLineIterator::new(json.as_bytes());
