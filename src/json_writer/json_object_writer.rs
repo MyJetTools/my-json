@@ -81,7 +81,7 @@ impl JsonObjectWriter {
         self
     }
 
-    pub fn write_object_if(
+    pub fn write_json_object_if(
         self,
         key: &str,
         write_or_not: bool,
@@ -293,7 +293,7 @@ mod tests {
     fn test_write_object_if_true() {
         let result = super::JsonObjectWriter::new()
             .write("key1", "value1")
-            .write_object_if("key2", true, |obj| {
+            .write_json_object_if("key2", true, |obj| {
                 obj.write("key3", "value3").write("key4", 54)
             })
             .build();
@@ -308,7 +308,7 @@ mod tests {
     fn test_write_object_if_false() {
         let result = super::JsonObjectWriter::new()
             .write("key1", "value1")
-            .write_object_if("key2", false, |obj| {
+            .write_json_object_if("key2", false, |obj| {
                 obj.write("key3", "value3").write("key4", 54)
             })
             .build();
