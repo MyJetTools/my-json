@@ -81,6 +81,19 @@ impl JsonObjectWriter {
         self
     }
 
+    pub fn write_object_if(
+        self,
+        key: &str,
+        write_object: impl Fn(JsonObjectWriter) -> JsonObjectWriter,
+        write_or_not: bool,
+    ) -> Self {
+        if !write_or_not {
+            return self;
+        }
+
+        self.write_json_object(key, write_object)
+    }
+
     pub fn write_iter<TJsonArrayWriter: JsonValueWriter>(
         mut self,
         key: &str,
@@ -274,5 +287,36 @@ mod tests {
             .build();
 
         assert_eq!("{\"key1\":\"value1\",\"key2\":[{\"key3\":\"value3\",\"key4\":54},{\"key3\":\"value5\",\"key4\":55}]}", result.as_str());
+    }
+
+    #[test]
+    fn test_write_object_if_true() {
+        let result = super::JsonObjectWriter::new()
+            .write("key1", "value1")
+            .write_object_if(
+                "key2",
+                |obj| obj.write("key3", "value3").write("key4", 54),
+                true,
+            )
+            .build();
+
+        assert_eq!(
+            "{\"key1\":\"value1\",\"key2\":{\"key3\":\"value3\",\"key4\":54}}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_write_object_if_false() {
+        let result = super::JsonObjectWriter::new()
+            .write("key1", "value1")
+            .write_object_if(
+                "key2",
+                |obj| obj.write("key3", "value3").write("key4", 54),
+                false,
+            )
+            .build();
+
+        assert_eq!("{\"key1\":\"value1\"}", result);
     }
 }
