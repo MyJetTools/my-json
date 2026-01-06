@@ -53,7 +53,10 @@ impl<'s> JPropName<'s> {
     pub fn as_str(&self) -> &str {
         match self {
             JPropName::Name(name) => name,
-            JPropName::ArrayAndIndex { j_prop_name, index } => j_prop_name,
+            JPropName::ArrayAndIndex {
+                j_prop_name,
+                index: _,
+            } => j_prop_name,
             JPropName::Array(name) => name,
         }
     }

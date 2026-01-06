@@ -84,8 +84,8 @@ impl JsonObjectWriter {
     pub fn write_object_if(
         self,
         key: &str,
-        write_object: impl Fn(JsonObjectWriter) -> JsonObjectWriter,
         write_or_not: bool,
+        write_object: impl Fn(JsonObjectWriter) -> JsonObjectWriter,
     ) -> Self {
         if !write_or_not {
             return self;
@@ -293,11 +293,9 @@ mod tests {
     fn test_write_object_if_true() {
         let result = super::JsonObjectWriter::new()
             .write("key1", "value1")
-            .write_object_if(
-                "key2",
-                |obj| obj.write("key3", "value3").write("key4", 54),
-                true,
-            )
+            .write_object_if("key2", true, |obj| {
+                obj.write("key3", "value3").write("key4", 54)
+            })
             .build();
 
         assert_eq!(
@@ -310,11 +308,9 @@ mod tests {
     fn test_write_object_if_false() {
         let result = super::JsonObjectWriter::new()
             .write("key1", "value1")
-            .write_object_if(
-                "key2",
-                |obj| obj.write("key3", "value3").write("key4", 54),
-                false,
-            )
+            .write_object_if("key2", false, |obj| {
+                obj.write("key3", "value3").write("key4", 54)
+            })
             .build();
 
         assert_eq!("{\"key1\":\"value1\"}", result);
