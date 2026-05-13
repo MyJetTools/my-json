@@ -114,7 +114,10 @@ impl JsonArrayWriter {
 }
 
 impl JsonValueWriter for JsonArrayWriter {
-    const IS_ARRAY: bool = true;
+    // `write` already emits the surrounding `[` and `]`, so callers in
+    // `JsonObjectWriter::write` must not wrap again — otherwise the result is
+    // double-bracketed.
+    const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         self.build_into(dest)
     }
