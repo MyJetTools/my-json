@@ -221,6 +221,18 @@ impl JsonObjectWriter {
         self.write_ref(key, value)
     }
 
+    pub fn write_ref_if_some<TJsonValue: JsonValueWriter>(
+        self,
+        key: &str,
+        value: Option<&TJsonValue>,
+    ) -> Self {
+        let Some(value) = value else {
+            return self;
+        };
+
+        self.write_ref(key, value)
+    }
+
     pub fn build(mut self) -> String {
         let mut raw = self.raw.take().unwrap();
         raw.push('}');
