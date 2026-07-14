@@ -23,10 +23,13 @@ impl<'s> JsonValueRef<'s> {
         self.data.unwrap_value(&self.json_slice)
     }
 
-    /// Converts the value into one of the system numeric types (`u8`, `i32`, `f64`, ...).
+    /// Converts the value into any target that implements `TryFrom<UnwrappedJsonValue>` —
+    /// the system integers/floats (`u8`, `i32`, `f64`, ...), `bool`, and `DateTimeAsMicroseconds`.
     ///
-    /// Shortcut for `self.unwrap_value()?.try_into()`. Conversion is strict: a floating
-    /// point JSON value never becomes an integer, and non-numeric values are rejected.
+    /// Shortcut for `self.unwrap_value()?.try_into()`. Numeric conversions are strict: a floating
+    /// point JSON value never becomes an integer, a float target rejects any value it can not hold
+    /// exactly (precision loss / overflow), and a type mismatch / out-of-range value is an `Err`,
+    /// never a silent coercion.
     pub fn try_get_number<T>(&'s self) -> Result<T, JsonParseError>
     where
         T: TryFrom<UnwrappedJsonValue<'s>, Error = JsonParseError>,
