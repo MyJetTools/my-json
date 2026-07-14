@@ -34,17 +34,25 @@ pub enum JPropName<'s> {
 impl<'s> JPropName<'s> {
     pub fn new(name: &'s str) -> Self {
         if name.ends_with(']') {
-            let index = name.rfind('[').unwrap();
+            // A trailing ']' only denotes an array segment when there is a matching '['. A key
+            // that merely contains ']' (or an index that is not a number) must NOT panic - it is
+            // treated as a literal property name instead.
+            if let Some(open) = name.rfind('[') {
+                if open == name.len() - 2 {
+                    // "name[]" -> whole-array fan-out
+                    return Self::Array(&name[..name.len() - 2]);
+                }
 
-            if index == name.len() - 2 {
-                return Self::Array(&name[..name.len() - 2]);
+                if let Ok(index) = name[open + 1..name.len() - 1].parse::<usize>() {
+                    return Self::ArrayAndIndex {
+                        j_prop_name: &name[..open],
+                        index,
+                    };
+                }
             }
 
-            let j_prop_name = &name[..index];
-
-            let index = name[index + 1..name.len() - 1].parse::<usize>().unwrap();
-
-            return Self::ArrayAndIndex { j_prop_name, index };
+            // malformed segment: no '[' or a non-numeric index -> literal key
+            return Self::Name(name);
         }
 
         Self::Name(name)
@@ -166,6 +174,42 @@ mod tests {
             }
             _ => panic!("Expected Array variant"),
         }
+    }
+
+    #[test]
+    fn test_j_prop_name_bracket_without_open_is_literal_not_panic() {
+        // ']' without a matching '[' must not panic; the whole thing is a literal key.
+        let prop_name = JPropName::new("weird]key]");
+        match prop_name {
+            JPropName::Name(name) => assert_eq!(name, "weird]key]"),
+            _ => panic!("Expected Name variant"),
+        }
+    }
+
+    #[test]
+    fn test_j_prop_name_non_numeric_index_is_literal_not_panic() {
+        // A non-numeric index must not panic; treated as a literal key.
+        let prop_name = JPropName::new("items[abc]");
+        match prop_name {
+            JPropName::Name(name) => assert_eq!(name, "items[abc]"),
+            _ => panic!("Expected Name variant"),
+        }
+
+        // negative index (not a usize) is also literal, not a panic
+        let prop_name = JPropName::new("items[-1]");
+        match prop_name {
+            JPropName::Name(name) => assert_eq!(name, "items[-1]"),
+            _ => panic!("Expected Name variant"),
+        }
+    }
+
+    #[test]
+    fn test_get_value_with_bracket_in_key_does_not_panic() {
+        // End-to-end: a hostile path with a stray ']' resolves without panicking.
+        let json = br#"{"a":1}"#;
+        let result = crate::j_path::get_value(json, "weird]key");
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_none());
     }
 
     #[test]

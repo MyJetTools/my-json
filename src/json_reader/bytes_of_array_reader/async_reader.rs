@@ -484,18 +484,29 @@ pub async fn check_json_symbol(
 
     match value {
         Some(value) => {
-            let value = std::str::from_utf8(value.as_slice()).unwrap();
-            if !rust_extensions::str_utils::compare_strings_case_insensitive(value, symbol) {
-                return Err(JsonParseError::new(format!(
-                    "Error Parsing {symbol} value. Invalid token found ['{}'] at position {}",
-                    value, pos
-                )));
+            // Untrusted bytes can be non-UTF-8 - that is a parse error, never a panic.
+            match std::str::from_utf8(value.as_slice()) {
+                Ok(value) => {
+                    if !rust_extensions::str_utils::compare_strings_case_insensitive(value, symbol)
+                    {
+                        return Err(JsonParseError::new(format!(
+                            "Error Parsing {symbol} value. Invalid token found ['{}'] at position {}",
+                            value, pos
+                        )));
+                    }
+                }
+                Err(_) => {
+                    return Err(JsonParseError::new(format!(
+                        "Error Parsing {symbol} value. Non-UTF8 token found at position {}",
+                        pos
+                    )));
+                }
             }
         }
         None => {
             return Err(JsonParseError::new(format!(
                 "Error Parsing {symbol}. Invalid token found ['{}'] at position {}",
-                std::str::from_utf8(src.get_slice_to_end(pos).await.unwrap().as_slice()).unwrap(),
+                String::from_utf8_lossy(src.get_slice_to_end(pos).await.unwrap().as_slice()),
                 pos
             )));
         }

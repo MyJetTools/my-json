@@ -454,18 +454,31 @@ pub fn check_json_symbol(
 
     match value {
         Some(value) => {
-            let value = std::str::from_utf8(value).unwrap();
-            if !rust_extensions::str_utils::compare_strings_case_insensitive(value, symbol) {
-                return Err(JsonParseError::new(format!(
-                    "Error Parsing {symbol} value. Invalid token found ['{}'] at position {}",
-                    value, pos
-                )));
+            // A garbage literal in an untrusted payload can carry non-UTF-8 bytes (e.g.
+            // `n\xFF\xFF\xFF`) - that must be a parse error, never a panic that takes down the
+            // whole document.
+            match std::str::from_utf8(value) {
+                Ok(value) => {
+                    if !rust_extensions::str_utils::compare_strings_case_insensitive(value, symbol)
+                    {
+                        return Err(JsonParseError::new(format!(
+                            "Error Parsing {symbol} value. Invalid token found ['{}'] at position {}",
+                            value, pos
+                        )));
+                    }
+                }
+                Err(_) => {
+                    return Err(JsonParseError::new(format!(
+                        "Error Parsing {symbol} value. Non-UTF8 token found at position {}",
+                        pos
+                    )));
+                }
             }
         }
         None => {
             return Err(JsonParseError::new(format!(
                 "Error Parsing {symbol}. Invalid token found ['{}'] at position {}",
-                std::str::from_utf8(src.get_slice_to_end(pos)).unwrap(),
+                String::from_utf8_lossy(src.get_slice_to_end(pos)),
                 pos
             )));
         }
@@ -495,5 +508,15 @@ mod tests {
         super::skip_white_spaces(&mut slice_iterator).unwrap();
         let result = super::find_the_end_of_the_number(&mut slice_iterator).unwrap();
         assert_eq!(4, result.pos);
+    }
+
+    #[test]
+    pub fn check_json_symbol_on_non_utf8_literal_is_error_not_panic() {
+        // `n\xFF\xFF\xFF` - a garbage literal starting like `null` but with non-UTF-8 bytes.
+        let bytes: [u8; 4] = [b'n', 0xFF, 0xFF, 0xFF];
+        let slice_iterator = SliceIterator::new(&bytes);
+
+        let result = super::check_json_symbol(&slice_iterator, "null");
+        assert!(result.is_err());
     }
 }
