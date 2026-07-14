@@ -1,215 +1,78 @@
-use rust_extensions::StrOrString;
+use std::fmt::Write;
+
+use rust_extensions::{date_time::DateTimeAsMicroseconds, StrOrString};
 
 use super::JsonValueWriter;
 
-impl JsonValueWriter for u8 {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        dest.push_str(self.to_string().as_str());
-    }
+// Integer writers: format straight into the destination buffer via `write!` instead of allocating
+// an intermediate `String` through `to_string()` on every value.
+macro_rules! impl_json_value_writer_for_integer {
+    ($($t:ty),* $(,)?) => {
+        $(
+            impl JsonValueWriter for $t {
+                const IS_ARRAY: bool = false;
+                fn write(&self, dest: &mut String) {
+                    let _ = write!(dest, "{}", self);
+                }
+            }
+
+            impl JsonValueWriter for Option<$t> {
+                const IS_ARRAY: bool = false;
+                fn write(&self, dest: &mut String) {
+                    match self {
+                        Some(v) => {
+                            let _ = write!(dest, "{}", v);
+                        }
+                        None => dest.push_str("null"),
+                    }
+                }
+            }
+        )*
+    };
 }
 
-impl JsonValueWriter for Option<u8> {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        match self {
-            Some(v) => dest.push_str(v.to_string().as_str()),
-            None => dest.push_str("null"),
-        }
-    }
+impl_json_value_writer_for_integer!(u8, i8, u16, i16, u32, i32, u64, i64, usize, isize);
+
+// Float writers: format straight into the buffer, and emit `null` for the non-finite values
+// (`NaN`, `+Infinity`, `-Infinity`) - those have no JSON representation and `to_string()` would
+// otherwise produce the invalid tokens `NaN` / `inf`. This matches `serde_json`.
+macro_rules! impl_json_value_writer_for_float {
+    ($($t:ty),* $(,)?) => {
+        $(
+            impl JsonValueWriter for $t {
+                const IS_ARRAY: bool = false;
+                fn write(&self, dest: &mut String) {
+                    if self.is_finite() {
+                        let _ = write!(dest, "{}", self);
+                    } else {
+                        dest.push_str("null");
+                    }
+                }
+            }
+
+            impl JsonValueWriter for Option<$t> {
+                const IS_ARRAY: bool = false;
+                fn write(&self, dest: &mut String) {
+                    match self {
+                        Some(v) if v.is_finite() => {
+                            let _ = write!(dest, "{}", v);
+                        }
+                        // both `None` and a non-finite value serialise as `null`
+                        _ => dest.push_str("null"),
+                    }
+                }
+            }
+        )*
+    };
 }
 
-impl JsonValueWriter for i8 {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        dest.push_str(self.to_string().as_str());
-    }
-}
-
-impl JsonValueWriter for Option<i8> {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        match self {
-            Some(v) => dest.push_str(v.to_string().as_str()),
-            None => dest.push_str("null"),
-        }
-    }
-}
-
-impl JsonValueWriter for u16 {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        dest.push_str(self.to_string().as_str());
-    }
-}
-
-impl JsonValueWriter for Option<u16> {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        match self {
-            Some(v) => dest.push_str(v.to_string().as_str()),
-            None => dest.push_str("null"),
-        }
-    }
-}
-
-impl JsonValueWriter for i16 {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        dest.push_str(self.to_string().as_str());
-    }
-}
-
-impl JsonValueWriter for Option<i16> {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        match self {
-            Some(v) => dest.push_str(v.to_string().as_str()),
-            None => dest.push_str("null"),
-        }
-    }
-}
-
-impl JsonValueWriter for u32 {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        dest.push_str(self.to_string().as_str());
-    }
-}
-
-impl JsonValueWriter for Option<u32> {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        match self {
-            Some(v) => dest.push_str(v.to_string().as_str()),
-            None => dest.push_str("null"),
-        }
-    }
-}
-
-impl JsonValueWriter for i32 {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        dest.push_str(self.to_string().as_str());
-    }
-}
-
-impl JsonValueWriter for Option<i32> {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        match self {
-            Some(v) => dest.push_str(v.to_string().as_str()),
-            None => dest.push_str("null"),
-        }
-    }
-}
-
-impl JsonValueWriter for u64 {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        dest.push_str(self.to_string().as_str());
-    }
-}
-
-impl JsonValueWriter for Option<u64> {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        match self {
-            Some(v) => dest.push_str(v.to_string().as_str()),
-            None => dest.push_str("null"),
-        }
-    }
-}
-
-impl JsonValueWriter for i64 {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        dest.push_str(self.to_string().as_str());
-    }
-}
-
-impl JsonValueWriter for Option<i64> {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        match self {
-            Some(v) => dest.push_str(v.to_string().as_str()),
-            None => dest.push_str("null"),
-        }
-    }
-}
-
-impl JsonValueWriter for usize {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        dest.push_str(self.to_string().as_str());
-    }
-}
-
-impl JsonValueWriter for Option<usize> {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        match self {
-            Some(v) => dest.push_str(v.to_string().as_str()),
-            None => dest.push_str("null"),
-        }
-    }
-}
-
-impl JsonValueWriter for isize {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        dest.push_str(self.to_string().as_str());
-    }
-}
-
-impl JsonValueWriter for Option<isize> {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        match self {
-            Some(v) => dest.push_str(v.to_string().as_str()),
-            None => dest.push_str("null"),
-        }
-    }
-}
-
-impl JsonValueWriter for f64 {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        dest.push_str(self.to_string().as_str());
-    }
-}
-
-impl JsonValueWriter for Option<f64> {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        match self {
-            Some(v) => dest.push_str(v.to_string().as_str()),
-            None => dest.push_str("null"),
-        }
-    }
-}
-
-impl JsonValueWriter for f32 {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        dest.push_str(self.to_string().as_str());
-    }
-}
-
-impl JsonValueWriter for Option<f32> {
-    const IS_ARRAY: bool = false;
-    fn write(&self, dest: &mut String) {
-        match self {
-            Some(v) => dest.push_str(v.to_string().as_str()),
-            None => dest.push_str("null"),
-        }
-    }
-}
+impl_json_value_writer_for_float!(f32, f64);
 
 #[cfg(feature = "decimal")]
 impl JsonValueWriter for rust_decimal::Decimal {
-    fn write_into(&self, dest: &mut String) {
-        dest.push_str(self.to_string().as_str());
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        let _ = write!(dest, "{}", self);
     }
 }
 
@@ -229,6 +92,28 @@ impl JsonValueWriter for Option<bool> {
     fn write(&self, dest: &mut String) {
         match self {
             Some(v) => bool::write(v, dest),
+            None => dest.push_str("null"),
+        }
+    }
+}
+
+// A JSON date-time is written as an RFC-3339 string (e.g. "2021-04-25T17:30:03.000000+00:00").
+// This is the format the read side resolves through `JsonValueRef::as_date_time` /
+// `try_get_date_time` (the string branch), so a written value round-trips back to the same
+// `DateTimeAsMicroseconds`. RFC-3339 (rather than a raw microseconds number) keeps the wire value
+// human-readable and unambiguous - the numeric read path guesses the unit from magnitude.
+impl JsonValueWriter for DateTimeAsMicroseconds {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        write_string(dest, self.to_rfc3339().as_str());
+    }
+}
+
+impl JsonValueWriter for Option<DateTimeAsMicroseconds> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        match self {
+            Some(v) => write_string(dest, v.to_rfc3339().as_str()),
             None => dest.push_str("null"),
         }
     }
@@ -360,39 +245,42 @@ impl JsonValueWriter for EmptyJsonArray {
     }
 }
 
+// Writes the comma-separated body of an array of `T`. Each element that is itself an array
+// (`T::IS_ARRAY`) is wrapped in its own `[` `]` - without this a `Vec<Vec<T>>` (or a `Vec` of any
+// array-valued element) would collapse into a single flat array, e.g. `[[1,2],[3]]` -> `[1,2,3]`.
+fn write_array_body<T: JsonValueWriter>(dest: &mut String, items: &[T]) {
+    for (no, itm) in items.iter().enumerate() {
+        if no > 0 {
+            dest.push(',');
+        }
+        if T::IS_ARRAY {
+            dest.push('[');
+        }
+        itm.write(dest);
+        if T::IS_ARRAY {
+            dest.push(']');
+        }
+    }
+}
+
 impl<T: JsonValueWriter> JsonValueWriter for Vec<T> {
     const IS_ARRAY: bool = true;
     fn write(&self, dest: &mut String) {
-        for (no, itm) in self.iter().enumerate() {
-            if no > 0 {
-                dest.push(',');
-            }
-            itm.write(dest);
-        }
+        write_array_body(dest, self.as_slice());
     }
 }
 
 impl<'s, T: JsonValueWriter> JsonValueWriter for &'s [T] {
     const IS_ARRAY: bool = true;
     fn write(&self, dest: &mut String) {
-        for (no, itm) in self.iter().enumerate() {
-            if no > 0 {
-                dest.push(',');
-            }
-            itm.write(dest);
-        }
+        write_array_body(dest, *self);
     }
 }
 
 impl<'s, T: JsonValueWriter> JsonValueWriter for &'s Vec<T> {
     const IS_ARRAY: bool = true;
     fn write(&self, dest: &mut String) {
-        for (no, itm) in self.iter().enumerate() {
-            if no > 0 {
-                dest.push(',');
-            }
-            itm.write(dest);
-        }
+        write_array_body(dest, self.as_slice());
     }
 }
 
@@ -441,5 +329,110 @@ mod test {
             .build();
 
         assert_eq!(result, r#"{"test":["1","2","3"]}"#);
+    }
+
+    #[test]
+    fn test_nested_vec_of_vec_keeps_inner_brackets() {
+        // Regression: a Vec<Vec<T>> must NOT collapse into a single flat array.
+        let nested = vec![vec![1, 2], vec![3]];
+        let result = JsonObjectWriter::new().write("m", nested).build();
+        assert_eq!(result, r#"{"m":[[1,2],[3]]}"#);
+    }
+
+    #[test]
+    fn test_nested_vec_via_array_writer() {
+        let nested = vec![vec![1, 2], vec![3, 4], vec![5, 6]];
+        let result = JsonArrayWriter::new().write(nested).build();
+        assert_eq!(result, "[[1,2],[3,4],[5,6]]");
+    }
+
+    #[test]
+    fn test_triple_nested_vec() {
+        let nested = vec![vec![vec![1], vec![2, 3]], vec![vec![4]]];
+        let result = JsonObjectWriter::new().write("m", nested).build();
+        assert_eq!(result, r#"{"m":[[[1],[2,3]],[[4]]]}"#);
+    }
+
+    #[test]
+    fn test_non_finite_floats_become_null() {
+        let result = JsonObjectWriter::new()
+            .write("nan", f64::NAN)
+            .write("pinf", f64::INFINITY)
+            .write("ninf", f64::NEG_INFINITY)
+            .write("nan32", f32::NAN)
+            .write("inf32", f32::INFINITY)
+            .build();
+
+        assert_eq!(
+            result,
+            r#"{"nan":null,"pinf":null,"ninf":null,"nan32":null,"inf32":null}"#
+        );
+    }
+
+    #[test]
+    fn test_finite_floats_are_written() {
+        let result = JsonObjectWriter::new()
+            .write("a", 4.5f64)
+            .write("b", -1.25f32)
+            .write("c", 0.0f64)
+            .build();
+
+        assert_eq!(result, r#"{"a":4.5,"b":-1.25,"c":0}"#);
+    }
+
+    #[test]
+    fn test_option_non_finite_float_is_null() {
+        let some_nan: Option<f64> = Some(f64::NAN);
+        let some_val: Option<f64> = Some(2.5);
+        let none_val: Option<f64> = None;
+
+        let result = JsonObjectWriter::new()
+            .write("a", some_nan)
+            .write("b", some_val)
+            .write("c", none_val)
+            .build();
+
+        assert_eq!(result, r#"{"a":null,"b":2.5,"c":null}"#);
+    }
+
+    #[test]
+    fn test_date_time_writes_rfc3339_and_round_trips() {
+        use rust_extensions::date_time::DateTimeAsMicroseconds;
+
+        let dt = DateTimeAsMicroseconds::from_str("2021-04-25T17:30:03.000Z").unwrap();
+
+        let json = JsonObjectWriter::new().write("ts", dt).build();
+
+        // read it back through the value reader - the wire format must match the read path
+        let read = crate::j_path::get_value(json.as_bytes(), "ts")
+            .unwrap()
+            .unwrap();
+        let back = read.try_get_date_time().unwrap();
+
+        assert_eq!(back.unix_microseconds, dt.unix_microseconds);
+    }
+
+    #[test]
+    fn test_option_date_time() {
+        use rust_extensions::date_time::DateTimeAsMicroseconds;
+
+        let dt = DateTimeAsMicroseconds::from_str("2021-04-25T17:30:03.000Z").unwrap();
+        let some: Option<DateTimeAsMicroseconds> = Some(dt);
+        let none: Option<DateTimeAsMicroseconds> = None;
+
+        let result = JsonObjectWriter::new()
+            .write("a", some)
+            .write("b", none)
+            .build();
+
+        assert!(result.contains(r#""b":null"#));
+
+        let read = crate::j_path::get_value(result.as_bytes(), "a")
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            read.try_get_date_time().unwrap().unix_microseconds,
+            dt.unix_microseconds
+        );
     }
 }

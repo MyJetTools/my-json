@@ -2,6 +2,13 @@ use rust_extensions::StrOrString;
 
 use crate::json_reader::{JsonArrayIterator, JsonFirstLineIterator, JsonParseError, JsonValueRef};
 
+/// Resolves a dotted / indexed **path** (e.g. `user.name`, `items[0].id`) against the JSON.
+///
+/// Duplicate keys: when an object contains the same key more than once the **first** occurrence
+/// wins (the scan stops at the first match). Note this differs from `serde_json`, whose object
+/// model keeps the last occurrence. To look a member up by a *literal* key that itself contains
+/// `.` or `[` / `]`, use [`get_object_member`] instead - `get_value` interprets those characters
+/// as path syntax.
 pub fn get_value<'s, 'd>(
     json: &'s [u8],
     path: impl Into<StrOrString<'d>>,
@@ -9,6 +16,38 @@ pub fn get_value<'s, 'd>(
     let path: StrOrString = path.into();
 
     j_path_internal(json, path.as_str())
+}
+
+/// Looks up a member of the top-level JSON object by its **literal** key, without treating `.` as
+/// nesting or `[..]` as an array index the way [`get_value`] does. Use this when the field name may
+/// contain those characters (e.g. `"a.b"`, `"weird[0]"`).
+///
+/// Returns `Ok(None)` when the key is absent. A malformed or non-object top level surfaces the
+/// underlying parse `Err` (exactly as [`get_value`] does) - it never panics. Duplicate keys: the
+/// **first** occurrence wins (consistent with [`get_value`]).
+pub fn get_object_member<'s, 'd>(
+    json: &'s [u8],
+    key: impl Into<StrOrString<'d>>,
+) -> Result<Option<JsonValueRef<'s>>, JsonParseError> {
+    let key: StrOrString = key.into();
+    let key = key.as_str();
+
+    let reader = JsonFirstLineIterator::new(json);
+
+    while let Some(next) = reader.get_next() {
+        let (member_key, value) = next?;
+
+        // `as_str` resolves the key's JSON escapes, so a literal `"a.b"` matches a JSON key
+        // written either plainly or as `"a.b"`.
+        if member_key.as_str()?.as_str() == key {
+            return Ok(Some(JsonValueRef {
+                data: value.data,
+                json_slice: json,
+            }));
+        }
+    }
+
+    Ok(None)
 }
 fn j_path_internal<'s>(
     json: &'s [u8],
@@ -105,6 +144,56 @@ pub(crate) fn find_object_from_array<'s>(
 
 #[cfg(test)]
 mod tests {
+    use crate::j_path::get_object_member;
+
+    #[test]
+    fn test_get_object_member_literal_key_with_dot() {
+        // a key containing '.' must be matched literally, not as a nested path
+        let json = br#"{"a.b":"dotted","a":{"b":"nested"}}"#;
+
+        let v = get_object_member(json, "a.b").unwrap().unwrap();
+        assert_eq!(v.as_str().unwrap().as_str(), "dotted");
+
+        // get_value, by contrast, treats "a.b" as a path into {"a":{"b":...}}
+        let v = crate::j_path::get_value(json, "a.b").unwrap().unwrap();
+        assert_eq!(v.as_str().unwrap().as_str(), "nested");
+    }
+
+    #[test]
+    fn test_get_object_member_literal_key_with_brackets() {
+        let json = br#"{"weird[0]":42,"list":[1,2,3]}"#;
+
+        let v = get_object_member(json, "weird[0]").unwrap().unwrap();
+        assert!(v.is_number());
+        assert_eq!(v.unwrap_as_number().unwrap(), Some(42));
+    }
+
+    #[test]
+    fn test_get_object_member_absent_key_is_none() {
+        let json = br#"{"a":1}"#;
+        assert!(get_object_member(json, "missing").unwrap().is_none());
+    }
+
+    #[test]
+    fn test_get_object_member_non_object_is_err_like_get_value() {
+        // A non-object top level surfaces the parse Err, exactly as get_value does (both fail on
+        // the same malformed input) - the point is that neither panics.
+        let arr = br#"[1,2,3]"#;
+        assert!(get_object_member(arr, "a").is_err());
+        assert!(crate::j_path::get_value(arr, "a").is_err());
+    }
+
+    #[test]
+    fn test_duplicate_keys_first_wins() {
+        // Documented semantics: the FIRST occurrence of a duplicate key wins.
+        let json = br#"{"k":"first","k":"second"}"#;
+
+        let v = crate::j_path::get_value(json, "k").unwrap().unwrap();
+        assert_eq!(v.as_str().unwrap().as_str(), "first");
+
+        let v = get_object_member(json, "k").unwrap().unwrap();
+        assert_eq!(v.as_str().unwrap().as_str(), "first");
+    }
 
     #[test]
     fn test_basic_case() {

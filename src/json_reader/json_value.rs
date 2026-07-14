@@ -295,6 +295,12 @@ impl JsonValue {
         ))
     }
 
+    /// Returns the value as a string, fully **resolving** JSON escapes (`\n`, `\t`, `\"`, `\\`,
+    /// `\/`, `\uXXXX` including surrogate pairs) for a quoted string, and yielding `""` for an
+    /// empty JSON string `""`. A non-string scalar (e.g. a number) is returned verbatim.
+    ///
+    /// Returns `None` for JSON `null` or when the underlying bytes are not valid UTF-8 - it never
+    /// panics on hostile input.
     pub fn as_str<'s>(&self, as_json_slice: &'s impl AsJsonSlice) -> Option<StrOrString<'s>> {
         let slice = as_json_slice.as_slice()[self.start..self.end].as_ref();
 
@@ -306,11 +312,19 @@ impl JsonValue {
             return Some(value);
         }
 
-        let result = std::str::from_utf8(slice).unwrap();
+        // Not a quoted string (a number / bare token) - return it verbatim, but never panic on
+        // non-UTF-8 bytes coming from an untrusted payload.
+        let result = std::str::from_utf8(slice).ok()?;
 
         Some(result.into())
     }
 
+    /// Returns the value with a single pair of matching surrounding quotes stripped, WITHOUT
+    /// resolving JSON escape sequences (the result borrows from the input, so it can not allocate
+    /// a de-escaped copy). For a value that needs escapes resolved use [`Self::as_str`].
+    ///
+    /// An empty JSON string `""` yields `Some("")`. Returns `None` for JSON `null` or non-UTF-8
+    /// bytes; it never panics on hostile input.
     pub fn as_unescaped_str<'s>(&self, as_json_slice: &'s impl AsJsonSlice) -> Option<&'s str> {
         let slice = as_json_slice.as_slice()[self.start..self.end].as_ref();
 
@@ -318,36 +332,28 @@ impl JsonValue {
             return None;
         }
 
-        if slice.len() <= 2 {
-            let result = std::str::from_utf8(slice).unwrap();
-            return Some(result);
-        }
+        // Strip a single pair of matching surrounding quotes when both are present; this also
+        // yields an empty slice (and thus `""`) for the empty string `""`.
+        let has_quotes = slice.len() >= 2
+            && ((slice[0] == crate::consts::DOUBLE_QUOTE
+                && slice[slice.len() - 1] == crate::consts::DOUBLE_QUOTE)
+                || (slice[0] == crate::consts::SINGLE_QUOTE
+                    && slice[slice.len() - 1] == crate::consts::SINGLE_QUOTE));
 
-        if slice[0] != crate::consts::DOUBLE_QUOTE
-            || slice[slice.len() - 1] != crate::consts::DOUBLE_QUOTE
-        {
-            let result = std::str::from_utf8(slice[1..slice.len() - 1].as_ref()).unwrap();
-            return Some(result.into());
-        }
+        let inner = if has_quotes {
+            slice[1..slice.len() - 1].as_ref()
+        } else {
+            slice
+        };
 
-        if slice[0] != crate::consts::SINGLE_QUOTE
-            || slice[slice.len() - 1] != crate::consts::SINGLE_QUOTE
-        {
-            let result = std::str::from_utf8(slice[1..slice.len() - 1].as_ref()).unwrap();
-            return Some(result.into());
-        }
-
-        let result = std::str::from_utf8(slice).unwrap();
-
-        Some(result.into())
+        std::str::from_utf8(inner).ok()
     }
 
     pub fn as_raw_str<'s>(&self, as_json_slice: &'s impl AsJsonSlice) -> Option<&'s str> {
         let slice = as_json_slice.as_slice()[self.start..self.end].as_ref();
 
-        let result = std::str::from_utf8(slice).unwrap();
-
-        Some(result.into())
+        // Never panic on non-UTF-8 bytes from an untrusted payload.
+        std::str::from_utf8(slice).ok()
     }
 
     pub fn as_date_time<'s>(
@@ -693,8 +699,13 @@ mod try_from_tests {
         assert!(v.try_get_number::<f32>().is_err());
 
         // 1e40 overflows f32 to +Infinity -> rejected; fits f64 and round-trips.
-        // (this parser only recognizes an UPPERCASE `E` exponent, and needs a dot for a Double)
+        // (an exponent - upper or lower case, with or without a dot - classifies as a Double)
         let v = j_path::get_value(br#"{"v":1.0E40}"#, "v").unwrap().unwrap();
+        assert!(v.try_get_number::<f32>().is_err());
+        assert!(v.try_get_number::<f64>().is_ok());
+
+        // the same value with a lowercase exponent and no dot is also a Double now
+        let v = j_path::get_value(br#"{"v":1e40}"#, "v").unwrap().unwrap();
         assert!(v.try_get_number::<f32>().is_err());
         assert!(v.try_get_number::<f64>().is_ok());
 
@@ -978,5 +989,43 @@ mod try_from_tests {
         }
 
         assert_eq!(collected, vec![1u8, 2u8, 3u8]);
+    }
+}
+
+#[cfg(test)]
+mod string_accessor_tests {
+    use crate::j_path;
+
+    #[test]
+    fn as_str_de_escapes_and_handles_empty_string() {
+        let v = j_path::get_value(br#"{"v":""}"#, "v").unwrap().unwrap();
+        // an empty JSON string is "", NOT `""`
+        assert_eq!(v.as_str().unwrap().as_str(), "");
+
+        let v = j_path::get_value(br#"{"v":"a\nb\t\"c\""}"#, "v").unwrap().unwrap();
+        assert_eq!(v.as_str().unwrap().as_str(), "a\nb\t\"c\"");
+    }
+
+    #[test]
+    fn as_unescaped_str_strips_quotes_and_handles_empty() {
+        let v = j_path::get_value(br#"{"v":""}"#, "v").unwrap().unwrap();
+        assert_eq!(v.as_unescaped_str().unwrap(), "");
+
+        let v = j_path::get_value(br#"{"v":"hello"}"#, "v").unwrap().unwrap();
+        assert_eq!(v.as_unescaped_str().unwrap(), "hello");
+    }
+
+    #[test]
+    fn invalid_utf8_inside_string_does_not_panic() {
+        use crate::json_reader::JsonValue;
+
+        // A quoted "string" value whose inner bytes are not valid UTF-8: the accessors must NOT
+        // panic (the old `from_utf8(..).unwrap()` was a DoS on hostile bytes) - they return None.
+        let bytes: &[u8] = &[b'"', 0xFF, b'"'];
+        let value = JsonValue::new(0, bytes.len());
+
+        assert!(value.as_str(&bytes).is_none());
+        assert!(value.as_unescaped_str(&bytes).is_none());
+        assert!(value.as_raw_str(&bytes).is_none());
     }
 }
