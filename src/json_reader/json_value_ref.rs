@@ -23,6 +23,26 @@ impl<'s> JsonValueRef<'s> {
         self.data.unwrap_value(&self.json_slice)
     }
 
+    /// Converts the value into one of the system numeric types (`u8`, `i32`, `f64`, ...).
+    ///
+    /// Shortcut for `self.unwrap_value()?.try_into()`. Conversion is strict: a floating
+    /// point JSON value never becomes an integer, and non-numeric values are rejected.
+    pub fn try_get_number<T>(&'s self) -> Result<T, JsonParseError>
+    where
+        T: TryFrom<UnwrappedJsonValue<'s>, Error = JsonParseError>,
+    {
+        T::try_from(self.unwrap_value()?)
+    }
+
+    /// `Option`-returning variant of [`Self::try_get_number`]: a JSON `null` yields `Ok(None)`,
+    /// a valid number yields `Ok(Some(_))`, and a type mismatch / out-of-range value is an `Err`.
+    pub fn try_get_number_opt<T>(&'s self) -> Result<Option<T>, JsonParseError>
+    where
+        Option<T>: TryFrom<UnwrappedJsonValue<'s>, Error = JsonParseError>,
+    {
+        self.unwrap_value()?.try_into()
+    }
+
     pub fn is_null(&'s self) -> bool {
         self.data.is_null(&self.json_slice)
     }
@@ -93,6 +113,23 @@ impl<'s> JsonValueRef<'s> {
 
     pub fn as_date_time(&'s self) -> Option<DateTimeAsMicroseconds> {
         self.data.as_date_time(&self.json_slice)
+    }
+
+    /// Converts the value into `DateTimeAsMicroseconds`.
+    ///
+    /// Accepts a string (ISO date or a numeric unix timestamp string) and a JSON number
+    /// (unit auto-detected by magnitude). Unlike [`Self::as_date_time`], a value that can
+    /// not be converted returns an `Err` instead of `None`.
+    pub fn try_get_date_time(&'s self) -> Result<DateTimeAsMicroseconds, JsonParseError> {
+        self.unwrap_value()?.try_into()
+    }
+
+    /// `Option`-returning variant of [`Self::try_get_date_time`]: a JSON `null` yields
+    /// `Ok(None)`, a parseable value yields `Ok(Some(_))`, otherwise an `Err`.
+    pub fn try_get_date_time_opt(
+        &'s self,
+    ) -> Result<Option<DateTimeAsMicroseconds>, JsonParseError> {
+        self.unwrap_value()?.try_into()
     }
 
     pub fn j_query_as_value(
