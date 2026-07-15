@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt::Write;
 
 use rust_extensions::{date_time::DateTimeAsMicroseconds, StrOrString};
@@ -284,6 +285,35 @@ impl<'s, T: JsonValueWriter> JsonValueWriter for &'s Vec<T> {
     }
 }
 
+// A `HashMap<String, V>` serialises as a JSON object - each entry becomes a `"key":value` pair.
+// `IS_ARRAY` is false because, like `JsonObjectWriter`, `write` emits its own surrounding `{` `}`,
+// so `JsonObjectWriter::write` must not wrap it again. A value that is itself an array
+// (`V::IS_ARRAY`) is wrapped in `[` `]`, mirroring `JsonObjectWriter::write`, so a
+// `HashMap<String, Vec<T>>` keeps each value as its own nested array rather than a flat run.
+// This impl is what lets derived writers (e.g. `MyHttpObjectStructure`) accept `HashMap` fields.
+// Entry order follows `HashMap` iteration order and is therefore not deterministic.
+impl<V: JsonValueWriter> JsonValueWriter for HashMap<String, V> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        dest.push('{');
+        for (no, (key, value)) in self.iter().enumerate() {
+            if no > 0 {
+                dest.push(',');
+            }
+            write_string(dest, key);
+            dest.push(':');
+            if V::IS_ARRAY {
+                dest.push('[');
+            }
+            value.write(dest);
+            if V::IS_ARRAY {
+                dest.push(']');
+            }
+        }
+        dest.push('}');
+    }
+}
+
 fn write_string(out: &mut String, value: &str) {
     out.push('"');
     crate::json_string_value::write_escaped_json_string_value(value, out);
@@ -410,6 +440,69 @@ mod test {
         let back = read.try_get_date_time().unwrap();
 
         assert_eq!(back.unix_microseconds, dt.unix_microseconds);
+    }
+
+    #[test]
+    fn test_hash_map_single_entry_renders_as_object() {
+        use std::collections::HashMap;
+
+        let mut map = HashMap::new();
+        map.insert("key".to_string(), "value");
+
+        let result = JsonObjectWriter::new().write("m", map).build();
+        assert_eq!(result, r#"{"m":{"key":"value"}}"#);
+    }
+
+    #[test]
+    fn test_hash_map_key_is_escaped() {
+        use std::collections::HashMap;
+
+        let mut map = HashMap::new();
+        map.insert(r#"he said "hi""#.to_string(), 1);
+
+        let result = JsonObjectWriter::new().write("m", map).build();
+        assert_eq!(result, r#"{"m":{"he said \"hi\"":1}}"#);
+    }
+
+    #[test]
+    fn test_hash_map_of_arrays_keeps_nested_brackets() {
+        use std::collections::HashMap;
+
+        let mut map = HashMap::new();
+        map.insert("nums".to_string(), vec![1, 2, 3]);
+
+        let result = JsonObjectWriter::new().write("m", map).build();
+        assert_eq!(result, r#"{"m":{"nums":[1,2,3]}}"#);
+    }
+
+    #[test]
+    fn test_hash_map_multi_entry_round_trips() {
+        use std::collections::HashMap;
+
+        // Order is not deterministic, so read each value back by path instead of
+        // asserting on the raw string.
+        let mut map = HashMap::new();
+        map.insert("a".to_string(), 1);
+        map.insert("b".to_string(), 2);
+        map.insert("c".to_string(), 3);
+
+        let json = JsonObjectWriter::new().write("m", map).build();
+
+        for (key, expected) in [("a", 1), ("b", 2), ("c", 3)] {
+            let read = crate::j_path::get_value(json.as_bytes(), format!("m.{}", key).as_str())
+                .unwrap()
+                .unwrap();
+            assert_eq!(read.unwrap_as_number().unwrap(), Some(expected));
+        }
+    }
+
+    #[test]
+    fn test_empty_hash_map_renders_empty_object() {
+        use std::collections::HashMap;
+
+        let map: HashMap<String, i32> = HashMap::new();
+        let result = JsonObjectWriter::new().write("m", map).build();
+        assert_eq!(result, r#"{"m":{}}"#);
     }
 
     #[test]
