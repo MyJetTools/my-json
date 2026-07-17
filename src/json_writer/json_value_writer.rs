@@ -98,7 +98,14 @@ impl JsonValueWriter for Option<bool> {
     }
 }
 
-// A JSON date-time is written as an RFC-3339 string (e.g. "2021-04-25T17:30:03.000000+00:00").
+// A JSON date-time is written as an RFC-3339 string in the canonical UTC form
+// (e.g. "2021-04-25T17:30:03.000000Z") - the same rendering `DateTimeAsMicroseconds`'s `Serialize`
+// produces, so this type has exactly one spelling on the wire regardless of who writes it.
+//
+// `to_rfc3339_utc()` (not `to_rfc3339()`): the `Z` suffix plus fixed 6-digit microseconds give a
+// constant width, so lexicographic string order matches chronological order. `to_rfc3339()` renders
+// the zero offset as `+00:00` and varies the fractional width (0/3/6/9 digits), losing that.
+//
 // This is the format the read side resolves through `JsonValueRef::as_date_time` /
 // `try_get_date_time` (the string branch), so a written value round-trips back to the same
 // `DateTimeAsMicroseconds`. RFC-3339 (rather than a raw microseconds number) keeps the wire value
@@ -106,7 +113,7 @@ impl JsonValueWriter for Option<bool> {
 impl JsonValueWriter for DateTimeAsMicroseconds {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
-        write_string(dest, self.to_rfc3339().as_str());
+        write_string(dest, self.to_rfc3339_utc().as_str());
     }
 }
 
@@ -114,7 +121,7 @@ impl JsonValueWriter for Option<DateTimeAsMicroseconds> {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         match self {
-            Some(v) => write_string(dest, v.to_rfc3339().as_str()),
+            Some(v) => write_string(dest, v.to_rfc3339_utc().as_str()),
             None => dest.push_str("null"),
         }
     }
@@ -433,6 +440,9 @@ mod test {
 
         let json = JsonObjectWriter::new().write("ts", dt).build();
 
+        // canonical UTC form: `Z` suffix, fixed 6-digit microseconds (NOT `+00:00`)
+        assert_eq!(json, r#"{"ts":"2021-04-25T17:30:03.000000Z"}"#);
+
         // read it back through the value reader - the wire format must match the read path
         let read = crate::j_path::get_value(json.as_bytes(), "ts")
             .unwrap()
@@ -440,6 +450,97 @@ mod test {
         let back = read.try_get_date_time().unwrap();
 
         assert_eq!(back.unix_microseconds, dt.unix_microseconds);
+    }
+
+    /// The wire form is pinned exactly: canonical UTC RFC-3339, `Z` suffix, always 6 fractional
+    /// digits. This is the same spelling `DateTimeAsMicroseconds`'s `Serialize` produces, so the
+    /// type has one representation on the wire whoever writes it.
+    #[test]
+    fn test_date_time_wire_format_is_exact() {
+        use rust_extensions::date_time::DateTimeAsMicroseconds;
+
+        for (raw, expected) in [
+            // real microseconds are kept
+            ("2024-01-02T03:04:05.123456Z", r#"{"ts":"2024-01-02T03:04:05.123456Z"}"#),
+            // a whole second is padded to 6 digits (not dropped, as AutoSi would)
+            ("2024-01-02T03:04:05.000Z", r#"{"ts":"2024-01-02T03:04:05.000000Z"}"#),
+            // milliseconds are padded to 6 digits (not left at 3)
+            ("2021-04-25T17:30:03.500Z", r#"{"ts":"2021-04-25T17:30:03.500000Z"}"#),
+            // epoch
+            ("1970-01-01T00:00:00.000Z", r#"{"ts":"1970-01-01T00:00:00.000000Z"}"#),
+        ] {
+            let dt = DateTimeAsMicroseconds::from_str(raw).unwrap();
+            let json = JsonObjectWriter::new().write("ts", dt).build();
+
+            assert_eq!(json, expected, "wire format for {}", raw);
+        }
+    }
+
+    #[test]
+    fn test_option_date_time_wire_format_is_exact() {
+        use rust_extensions::date_time::DateTimeAsMicroseconds;
+
+        let dt = DateTimeAsMicroseconds::from_str("2024-01-02T03:04:05.123456Z").unwrap();
+        let some: Option<DateTimeAsMicroseconds> = Some(dt);
+        let none: Option<DateTimeAsMicroseconds> = None;
+
+        let json = JsonObjectWriter::new().write("a", some).write("b", none).build();
+
+        assert_eq!(
+            json,
+            r#"{"a":"2024-01-02T03:04:05.123456Z","b":null}"#
+        );
+    }
+
+    #[test]
+    fn test_date_time_keeps_real_microseconds() {
+        use rust_extensions::date_time::DateTimeAsMicroseconds;
+
+        let dt = DateTimeAsMicroseconds::from_str("2024-01-02T03:04:05.123456Z").unwrap();
+        let json = JsonObjectWriter::new().write("ts", dt).build();
+
+        assert_eq!(json, r#"{"ts":"2024-01-02T03:04:05.123456Z"}"#);
+
+        // and the microseconds survive a full round-trip
+        let back = crate::j_path::get_value(json.as_bytes(), "ts")
+            .unwrap()
+            .unwrap()
+            .try_get_date_time()
+            .unwrap();
+        assert_eq!(back.unix_microseconds, dt.unix_microseconds);
+    }
+
+    /// Fixed width + `Z` => lexicographic string order == chronological order.
+    /// This is what the floating-width `to_rfc3339()` (AutoSi) could not guarantee.
+    #[test]
+    fn test_date_time_strings_sort_chronologically() {
+        use rust_extensions::date_time::DateTimeAsMicroseconds;
+
+        // deliberately mixed fractional magnitudes - these are exactly the values whose
+        // rendered width used to vary (0 / 3 / 6 digits)
+        let mut moments: Vec<DateTimeAsMicroseconds> = [
+            "2024-01-02T03:04:05.000000Z",
+            "2024-01-02T03:04:05.000001Z",
+            "2024-01-02T03:04:05.001Z",
+            "2024-01-02T03:04:05.500Z",
+            "2024-01-02T03:04:06.000000Z",
+            "2023-12-31T23:59:59.999999Z",
+            "1970-01-01T00:00:00.000000Z",
+        ]
+        .iter()
+        .map(|s| DateTimeAsMicroseconds::from_str(s).unwrap())
+        .collect();
+
+        moments.sort_by_key(|m| m.unix_microseconds);
+        let by_time: Vec<String> = moments.iter().map(|m| m.to_rfc3339_utc()).collect();
+
+        let mut by_string = by_time.clone();
+        by_string.sort();
+
+        assert_eq!(
+            by_time, by_string,
+            "lexicographic order of the written strings must match chronological order"
+        );
     }
 
     #[test]
