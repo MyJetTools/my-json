@@ -154,6 +154,12 @@ pub fn find_the_end_of_json(src: &impl ArrayOfBytesIterator) -> Result<usize, Js
             skip_white_spaces_and_peek_expected_token(src, ExpectedJsonObjectKeyStart)?;
 
         if next_value.value == crate::consts::CLOSE_BRACKET {
+            // Consume the `}` - the non-empty path below leaves the position past it (its token
+            // comes from `..._get_expected_token`), and every caller measures the value by the
+            // position afterwards rather than by this return value. Peeking alone stopped *on*
+            // the `}`, so an empty object nested in an array (`[{}]`) came back as a truncated
+            // `{` and the iterator then tripped over the `}` as its next token.
+            src.get_next();
             return Ok(next_value.pos);
         }
 
@@ -187,12 +193,25 @@ pub fn find_the_end_of_json(src: &impl ArrayOfBytesIterator) -> Result<usize, Js
 pub fn find_the_end_of_array(src: &impl ArrayOfBytesIterator) -> Result<NextValue, JsonParseError> {
     let _open_array_token = src.get_next().unwrap();
 
-    /*
-       println!(
-           "Found Open Array Token: {} at {}",
-           open_array_token.value as char, open_array_token.pos
-       );
-    */
+    // An empty array holds no value to walk over, so `]` can legally come first. Peeking straight
+    // for a value start (as this used to) rejected it, and an empty array nested inside another
+    // array - `[[],[1]]`, i.e. any `Vec<Vec<T>>` with an empty inner vec - became unreadable even
+    // though the writer emits it. `find_the_end_of_json` has always made the same check for `{}`.
+    let first_token =
+        skip_white_spaces_and_peek_expected_token(src, ExpectedJsonValueStartOrEndOfArray)?;
+
+    if first_token.value == crate::consts::CLOSE_ARRAY {
+        // Consume it, so the caller's `get_pos()` lands past the end of this array - the same
+        // place the non-empty path below leaves it.
+        return match src.get_next() {
+            Some(close_token) => Ok(close_token),
+            None => Err(JsonParseError::new(format!(
+                "Error reading the end of the array. We reached the end of the payload at {}",
+                first_token.pos
+            ))),
+        };
+    }
+
     loop {
         let value_start = skip_white_spaces_and_peek_expected_token(src, ExpectedJsonValueStart)?;
         find_the_end_of_the_object_value(src, value_start.value)?;

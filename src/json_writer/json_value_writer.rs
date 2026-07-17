@@ -32,7 +32,12 @@ macro_rules! impl_json_value_writer_for_integer {
     };
 }
 
-impl_json_value_writer_for_integer!(u8, i8, u16, i16, u32, i32, u64, i64, usize, isize);
+// `i128` / `u128` are here so the writer covers every integer the reader can read back: JSON has
+// no integer width limit, and a `u128` renders as plain digits like any other. Without them a
+// `u128` field would have no wire form at all, while `JsonValueReader` happily reads one.
+impl_json_value_writer_for_integer!(
+    u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, usize, isize
+);
 
 // Float writers: format straight into the buffer, and emit `null` for the non-finite values
 // (`NaN`, `+Infinity`, `-Infinity`) - those have no JSON representation and `to_string()` would
@@ -74,6 +79,21 @@ impl JsonValueWriter for rust_decimal::Decimal {
     const IS_ARRAY: bool = false;
     fn write(&self, dest: &mut String) {
         let _ = write!(dest, "{}", self);
+    }
+}
+
+// Mirrors `Option<DateTimeAsMicroseconds>`: without this a `Option<Decimal>` field has no wire
+// form, even though the reader can read one back.
+#[cfg(feature = "decimal")]
+impl JsonValueWriter for Option<rust_decimal::Decimal> {
+    const IS_ARRAY: bool = false;
+    fn write(&self, dest: &mut String) {
+        match self {
+            Some(v) => {
+                let _ = write!(dest, "{}", v);
+            }
+            None => dest.push_str("null"),
+        }
     }
 }
 

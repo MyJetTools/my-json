@@ -188,19 +188,22 @@ pub async fn find_the_end_of_json(
 ) -> Result<usize, JsonParseError> {
     skip_white_spaces_and_get_expected_token(src, ExpectedOpenJsonObjectToken).await?;
     loop {
+        // Peek, don't consume: `find_the_end_of_the_string` eats the opening quote itself. This
+        // used to consume it here as well, so the quote was counted twice - harmless for a key of
+        // one character or more, but an empty key (`{"":1}`) had its *closing* quote swallowed and
+        // the scan then ran on into the rest of the payload. The sync twin has always peeked.
         let key_start =
-            skip_white_spaces_and_get_expected_token(src, ExpectedJsonObjectKeyStart).await?;
+            skip_white_spaces_and_peek_expected_token(src, ExpectedJsonObjectKeyStart).await?;
+
+        // An empty object has no key to read. Mirrors the sync `find_the_end_of_json`; the `}` is
+        // consumed so the position ends up past it, exactly as the non-empty path below leaves it.
+        if key_start.value == crate::consts::CLOSE_BRACKET {
+            src.get_next().await.unwrap();
+            return Ok(key_start.pos);
+        }
+
         find_the_end_of_the_string(src).await?;
-        println!(
-            "{}",
-            std::str::from_utf8(
-                src.get_slice_to_current_pos(key_start.pos)
-                    .await
-                    .unwrap()
-                    .as_slice()
-            )
-            .unwrap()
-        );
+
         skip_white_spaces_and_get_expected_token(src, ExpectedJsonObjectKeyValueSeparator).await?;
 
         let value_start =
@@ -224,12 +227,18 @@ pub async fn find_the_end_of_array(
 ) -> Result<NextValue, JsonParseError> {
     let _open_array_token = src.get_next().await.unwrap().unwrap();
 
-    /*
-       println!(
-           "Found Open Array Token: {} at {}",
-           open_array_token.value as char, open_array_token.pos
-       );
-    */
+    // Empty array: `]` can legally come first, and peeking straight for a value start rejects it.
+    // Kept in step with the sync `find_the_end_of_array`, which had the same bug.
+    let first_token =
+        skip_white_spaces_and_peek_expected_token(src, ExpectedJsonValueStartOrEndOfArray).await?;
+
+    if first_token.value == crate::consts::CLOSE_ARRAY {
+        // Consume it, leaving the position past the end of this array. The peek above already
+        // proved the token is buffered, so this mirrors the unwrap the rest of this file uses.
+        let close_token = src.get_next().await.unwrap().unwrap();
+        return Ok(close_token);
+    }
+
     loop {
         let value_start =
             skip_white_spaces_and_peek_expected_token(src, ExpectedJsonValueStart).await?;

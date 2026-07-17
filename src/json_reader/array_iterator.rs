@@ -76,6 +76,43 @@ mod tests {
         assert!(item.is_none());
     }
 
+    /// Regression: `find_the_end_of_array` used to demand a value straight after the `[`, so an
+    /// empty array *nested inside* an array was unreadable - `[[],[1]]` failed at the `]` of the
+    /// inner empty one. A top level `[]` always worked (the iterator checks for the close token
+    /// itself), which is why this went unnoticed; the writer emits `[[],[1]]` for a
+    /// `Vec<Vec<T>>` whose first element is empty.
+    #[test]
+    fn test_empty_array_nested_inside_an_array() {
+        for (json, expected) in [
+            ("[[]]", vec!["[]"]),
+            ("[[],[1]]", vec!["[]", "[1]"]),
+            ("[[1],[]]", vec!["[1]", "[]"]),
+            ("[[],[]]", vec!["[]", "[]"]),
+            ("[[], [ ] ]", vec!["[]", "[ ]"]),
+            ("[[[]],[]]", vec!["[[]]", "[]"]),
+            ("[{},[]]", vec!["{}", "[]"]),
+        ] {
+            let iter: super::JsonArrayIterator = json.as_bytes().into();
+
+            let mut found = Vec::new();
+            while let Some(item) = iter.get_next() {
+                let item = item.unwrap_or_else(|err| {
+                    panic!("failed to iterate {}: {}", json, err.to_string())
+                });
+                found.push(std::str::from_utf8(item.as_slice()).unwrap().to_string());
+            }
+
+            assert_eq!(found, expected, "iterating {}", json);
+        }
+    }
+
+    /// The empty-array check must not loosen the grammar: a trailing comma is still an error.
+    #[test]
+    fn test_nested_array_with_trailing_comma_is_still_rejected() {
+        let iter: super::JsonArrayIterator = "[[1,],[2]]".as_bytes().into();
+        assert!(iter.get_next().unwrap().is_err());
+    }
+
     #[test]
     fn test_objects() {
         let src =

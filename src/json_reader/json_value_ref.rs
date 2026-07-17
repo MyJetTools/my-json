@@ -110,7 +110,14 @@ impl<'s> JsonValueRef<'s> {
         self.data.as_raw_str(&self.json_slice)
     }
 
-    pub fn as_slice(&'s self) -> &'s [u8] {
+    /// The value's raw source text.
+    ///
+    /// Borrowed for the document lifetime `'s`, NOT for the borrow of `self` - the other
+    /// accessors here take `&'s self`, which ties the result to the ref itself and makes them
+    /// unusable from a `JsonValueReader` impl: reading a `Vec<T>` builds each element ref as a
+    /// local, and a local can not be borrowed for `'s`. Taking `&self` costs nothing (the
+    /// underlying `json_slice` is already `&'s [u8]`) and lets a generated reader recurse.
+    pub fn as_slice(&self) -> &'s [u8] {
         &self.json_slice[self.data.start..self.data.end]
     }
 

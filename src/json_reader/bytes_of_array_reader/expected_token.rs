@@ -97,3 +97,20 @@ impl ExpectedToken for ExpectedJsonValueStart {
         Err(format!("Start of Volume"))
     }
 }
+
+/// The first token inside an array: either a value, or the `]` of an empty array.
+///
+/// The mirror of `ExpectedJsonObjectKeyStart`, which likewise accepts the `}` that closes an
+/// empty object. Only valid for the *first* position - once an element has been read, a `,` must
+/// be followed by a real value, so `[1,]` stays an error.
+pub struct ExpectedJsonValueStartOrEndOfArray;
+
+impl ExpectedToken for ExpectedJsonValueStartOrEndOfArray {
+    fn we_are_expecting_token(&self, token: u8) -> Result<(), String> {
+        if token == crate::consts::CLOSE_ARRAY {
+            return Ok(());
+        }
+
+        ExpectedJsonValueStart.we_are_expecting_token(token)
+    }
+}
