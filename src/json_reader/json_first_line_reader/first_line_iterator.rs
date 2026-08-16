@@ -62,6 +62,92 @@ mod tests {
     use crate::json_reader::JsonFirstLineIterator;
 
     #[test]
+    fn test_back_slash_in_value_survives_write_and_read() {
+        let src_value = "demo\\data";
+
+        let json = crate::my_json!({
+            "key" => src_value,
+        })
+        .build();
+
+        // The back slash has to be escaped on the wire
+        assert_eq!(json, r#"{"key":"demo\\data"}"#);
+
+        let reader = JsonFirstLineIterator::new(json.as_bytes());
+
+        let (key, value) = reader.get_next().unwrap().unwrap();
+
+        assert_eq!(key.as_str().unwrap().as_str(), "key");
+        assert_eq!(value.as_str().unwrap().as_str(), src_value);
+
+        assert!(reader.get_next().is_none());
+    }
+
+    #[test]
+    fn test_back_slash_in_value_read_from_raw_json() {
+        // The same payload, hand written - proves the reader side alone de-escapes it
+        let json = r#"{"key":"demo\\data","next":"value"}"#;
+
+        let reader = JsonFirstLineIterator::new(json.as_bytes());
+
+        let (key, value) = reader.get_next().unwrap().unwrap();
+        assert_eq!(key.as_str().unwrap().as_str(), "key");
+        assert_eq!(value.as_str().unwrap().as_str(), "demo\\data");
+        assert_eq!(value.as_raw_str().unwrap(), r#""demo\\data""#);
+
+        // The escaped back slash must not swallow the value delimiter
+        let (key, value) = reader.get_next().unwrap().unwrap();
+        assert_eq!(key.as_str().unwrap().as_str(), "next");
+        assert_eq!(value.as_str().unwrap().as_str(), "value");
+
+        assert!(reader.get_next().is_none());
+    }
+
+    #[test]
+    fn test_back_slash_before_the_closing_quote() {
+        // A value ending with a back slash - the escaped `\\` must not make the parser treat
+        // the closing quote as escaped
+        let src_value = "demo\\data\\";
+
+        let json = crate::my_json!({
+            "key"  => src_value,
+            "key2" => "value2",
+        })
+        .build();
+
+        assert_eq!(json, r#"{"key":"demo\\data\\","key2":"value2"}"#);
+
+        let reader = JsonFirstLineIterator::new(json.as_bytes());
+
+        let (key, value) = reader.get_next().unwrap().unwrap();
+        assert_eq!(key.as_str().unwrap().as_str(), "key");
+        assert_eq!(value.as_str().unwrap().as_str(), src_value);
+
+        let (key, value) = reader.get_next().unwrap().unwrap();
+        assert_eq!(key.as_str().unwrap().as_str(), "key2");
+        assert_eq!(value.as_str().unwrap().as_str(), "value2");
+
+        assert!(reader.get_next().is_none());
+    }
+
+    #[test]
+    fn test_back_slash_in_the_field_name() {
+        let json = crate::my_json!({
+            "demo\\key" => "demo\\data",
+        })
+        .build();
+
+        assert_eq!(json, r#"{"demo\\key":"demo\\data"}"#);
+
+        let reader = JsonFirstLineIterator::new(json.as_bytes());
+
+        let (key, value) = reader.get_next().unwrap().unwrap();
+
+        assert_eq!(key.as_str().unwrap().as_str(), "demo\\key");
+        assert_eq!(value.as_str().unwrap().as_str(), "demo\\data");
+    }
+
+    #[test]
     fn test_basic_case() {
         let json = r#"{"key1": "value1", "key2": "value2", "object": { "key":"value" }}"#;
 
