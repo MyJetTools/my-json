@@ -5,3 +5,5 @@ pub use reader_inner::*;
 //pub use read_mode::*;
 mod first_line_iterator;
 pub use first_line_iterator::*;
+mod first_line_iterator_async;
+pub use first_line_iterator_async::*;

@@ -36,6 +36,16 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonArrayIteratorInner<TArrayO
         }
     }
 
+    /// Goes on with an array that is partly read already: `initialized` tells whether its `[` is
+    /// behind. Unlike `new` it does not check that there is anything to read - a source that gets
+    /// its bytes in chunks may have none of them yet.
+    pub(crate) fn resume(data: TArrayOfBytesIterator, initialized: bool) -> Self {
+        Self {
+            data,
+            initialized: Cell::new(initialized),
+        }
+    }
+
     pub fn get_src_slice(&self) -> &[u8] {
         self.data.get_src_slice()
     }

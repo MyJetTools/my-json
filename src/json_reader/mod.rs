@@ -4,6 +4,9 @@ mod json_first_line_reader;
 mod json_parse_error;
 
 pub use json_parse_error::JsonParseError;
+mod json_stream_error;
+pub use json_stream_error::JsonStreamError;
+mod json_stream_scanner;
 
 pub use json_first_line_reader::*;
 pub(crate) mod json_value;

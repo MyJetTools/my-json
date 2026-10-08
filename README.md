@@ -9,7 +9,7 @@ A high-performance Rust library for JSON processing with a powerful JSON path qu
 - **Path-based updates** via `j_update`
 - **Fluent writer API** with `JsonObjectWriter` / `JsonArrayWriter`
 - **Declarative macro** `my_json!` for terse construction (bracket-dispatched: `{}` builds an object, `[]` builds an array)
-- **Async streaming** of JSON arrays and JSON-L
+- **Async streaming** of JSON arrays item by item, JSON objects key by key, and JSON-L
 - Optional `rust_decimal` support via the `decimal` feature
 
 ## Installation
@@ -684,6 +684,51 @@ Anything implementing `JsonValueWriter` can be written:
 
 ---
 
+## Reading JSON from a Stream
+
+Two readers take a JSON apart as its bytes arrive, so it is never held in memory as a whole. The source is anything that implements `rust_extensions::AsyncBytesStream<TError>` — a response body, a file, a blob downloaded part by part.
+
+- `JsonArrayIteratorAsync` reads a JSON array item by item: `[{"id":1},{"id":2}]`.
+- `JsonFirstLineIteratorAsync` reads a JSON object key by key: `{"name":"John","age":30}`.
+
+```rust
+use my_json::json_reader::{JsonArrayIteratorAsync, JsonFirstLineIteratorAsync, JsonStreamError};
+
+let mut items = JsonArrayIteratorAsync::new(stream);
+
+while let Some(item) = items.get_next().await {
+    match item {
+        // A `JsonValueRef` - read like any other JSON value
+        Ok(item) => {
+            let id = my_json::j_path::get_value(item.as_slice(), "id").unwrap().unwrap();
+            println!("{}", id.as_str().unwrap().as_str());
+        }
+        // The stream failed - `err` is its own error, as it is
+        Err(JsonStreamError::Stream(err)) => return Err(err),
+        // What the stream gave is not a JSON array - `err` is a `JsonParseError`
+        Err(JsonStreamError::Json(err)) => panic!("{}", err.to_string()),
+    }
+}
+
+let mut fields = JsonFirstLineIteratorAsync::new(other_stream);
+
+while let Some(field) = fields.get_next().await {
+    // The same `JsonFieldNameRef` and `JsonValueRef` that `JsonFirstLineIterator` gives
+    let (key, value) = field.unwrap();
+    println!("{} = {}", key.as_str().unwrap().as_str(), value.as_str().unwrap().as_str());
+}
+```
+
+- **Chunks are cut anywhere.** An item, a key or a value may begin in one chunk and end in another. The reader reads more of the stream until it is whole, and returns it as soon as its last byte is read.
+- **No copies.** What is returned points into the buffer the stream is read into, and the next `get_next()` drops it from there. Keeping it needs a copy: `item.as_slice().to_vec()`.
+- **Memory.** The buffer holds the item being read and the rest of the chunk it ends in, and its room is reused for the items after it. It grows the way a `Vec` does, so its capacity can reach twice the largest item.
+- **Same reading as the sync iterators.** The bytes are scanned by the code `JsonArrayIterator` and `JsonFirstLineIterator` run: the same items, and the same error on a broken JSON. A position in an error is the position in the stream.
+- **A stream error is returned as it is.** Nothing that was read is lost, and the next `get_next()` asks the stream again.
+- **A JSON error ends the reading.** Every `get_next()` after it returns `None`.
+- **The stream is not asked for more after the end.** Once the `]` or the `}` is read, `get_next()` returns `None` without reading on. What came after it in the same chunk is dropped with the reader.
+
+---
+
 ## API Reference
 
 ### `j_path` Module
@@ -738,7 +783,7 @@ pub fn j_update<'s, 'd>(
 
 - **Zero-copy reads**: `JsonValueRef` borrows from the input byte slice.
 - **Lazy parsing**: paths are resolved on demand, not by pre-parsing the entire document.
-- **Streaming**: `array_parser_async` and `json_l_iterator(_async)` support large inputs.
+- **Streaming**: `JsonArrayIteratorAsync` and `JsonFirstLineIteratorAsync` read a stream of bytes and return what they read with no copy made of it; `JsonLIterator` / `JsonLIteratorAsync` split JSON-L.
 
 ## Error Handling
 

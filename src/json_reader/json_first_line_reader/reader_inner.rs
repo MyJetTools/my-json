@@ -21,6 +21,15 @@ impl<TArrayOfBytesIterator: ArrayOfBytesIterator> JsonFirstLineReaderInner<TArra
         }
     }
 
+    /// Goes on with an object that is partly read already: `had_init` tells whether its `{` is
+    /// behind.
+    pub(crate) fn resume(raw: TArrayOfBytesIterator, had_init: bool) -> Self {
+        Self {
+            raw,
+            had_init: Cell::new(had_init),
+        }
+    }
+
     fn init_if_requires(&self) -> Result<bool, JsonParseError> {
         if self.had_init.get() {
             let token = sync_reader::skip_white_spaces_and_get_expected_token(
