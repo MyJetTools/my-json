@@ -95,8 +95,7 @@ impl<TError, TStream: AsyncBytesStream<TError>> JsonStreamScanner<TError, TStrea
                 }
             }
 
-            // What `get_next()` returns shares the buffer of the reader - it is dropped right
-            // here, so the next chunk is put into that buffer in place.
+            // The next chunk is copied in behind the bytes that are not parsed yet
             if let Err(err) = self.reader.get_next().await {
                 return Some(Err(JsonStreamError::Stream(err)));
             }

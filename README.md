@@ -686,7 +686,7 @@ Anything implementing `JsonValueWriter` can be written:
 
 ## Reading JSON from a Stream
 
-Two readers take a JSON apart as its bytes arrive, so it is never held in memory as a whole. The source is anything that implements `rust_extensions::AsyncBytesStream<TError>` — a response body, a file, a blob downloaded part by part.
+Two readers take a JSON apart as its bytes arrive, so it is never held in memory as a whole. The source is anything that implements `rust_extensions::AsyncBytesStream<TError>` — a response body, a file, a blob downloaded part by part, the `DoubleBufferReader` a socket is read into.
 
 - `JsonArrayIteratorAsync` reads a JSON array item by item: `[{"id":1},{"id":2}]`.
 - `JsonFirstLineIteratorAsync` reads a JSON object key by key: `{"name":"John","age":30}`.
@@ -720,7 +720,7 @@ while let Some(field) = fields.get_next().await {
 ```
 
 - **Chunks are cut anywhere.** An item, a key or a value may begin in one chunk and end in another. The reader reads more of the stream until it is whole, and returns it as soon as its last byte is read.
-- **No copies.** What is returned points into the buffer the stream is read into, and the next `get_next()` drops it from there. Keeping it needs a copy: `item.as_slice().to_vec()`.
+- **One copy of the stream, none of an item.** A chunk is copied into the buffer of the reader as it comes and let go at once, so a `DoubleBuffer` gets its buffer back. What is returned points into the buffer of the reader, and the next `get_next()` drops it from there. Keeping it needs a copy: `item.as_slice().to_vec()`.
 - **Memory.** The buffer holds the item being read and the rest of the chunk it ends in, and its room is reused for the items after it. It grows the way a `Vec` does, so its capacity can reach twice the largest item.
 - **Same reading as the sync iterators.** The bytes are scanned by the code `JsonArrayIterator` and `JsonFirstLineIterator` run: the same items, and the same error on a broken JSON. A position in an error is the position in the stream.
 - **A stream error is returned as it is.** Nothing that was read is lost, and the next `get_next()` asks the stream again.

@@ -16,15 +16,14 @@ use my_json::json_reader::{
     JsonFieldNameRef, JsonFirstLineIterator, JsonFirstLineIteratorAsync, JsonStreamError,
     JsonValueRef,
 };
-use rust_extensions::bytes::Bytes;
-use rust_extensions::AsyncBytesStream;
+use rust_extensions::{AsyncBytesStream, DoubleBufferError};
 
 /// A key and its value as they are in the JSON, or the error - the shape both paths are compared
 /// on.
 type Comparable = Result<(String, String), String>;
 
-fn as_comparable(
-    item: Result<(JsonFieldNameRef<'_>, JsonValueRef<'_>), JsonStreamError<String>>,
+fn as_comparable<TError: std::fmt::Display>(
+    item: Result<(JsonFieldNameRef<'_>, JsonValueRef<'_>), JsonStreamError<TError>>,
 ) -> Comparable {
     match item {
         Ok((key, value)) => Ok((
@@ -36,9 +35,15 @@ fn as_comparable(
     }
 }
 
+fn read_async(stream: Chunks) -> Vec<Comparable> {
+    read_from::<String, _>(stream)
+}
+
 /// Reads until the reader says the object is over - an error does not stop the loop, the reader
 /// has to.
-fn read_async(stream: Chunks) -> Vec<Comparable> {
+fn read_from<TError: std::fmt::Display, TStream: AsyncBytesStream<TError>>(
+    stream: TStream,
+) -> Vec<Comparable> {
     block_on(async {
         let mut reader = JsonFirstLineIteratorAsync::new(stream);
 
@@ -219,25 +224,20 @@ fn a_key_and_a_value_cut_between_chunks_are_returned_whole() {
     );
 }
 
-/// A key and its value are handed out of the buffer the stream is read into, not copied out of
-/// it: the ones of a chunk nothing is joined to are the bytes of that very chunk. They are read
-/// further with the sync API as they are.
+/// A key and its value are not copied out of the buffer of the reader: what came in one chunk is
+/// where it is in it - a value a byte, the `:`, after its key, and a key a byte, the `,`, after
+/// the value before it. They are read further with the sync API as they are.
 #[test]
 fn a_key_and_a_value_are_not_copied() {
-    let chunk = Bytes::from(br#"{"user":{"name":"John"},"tags":["a","b"]}"#.to_vec());
-    let chunk_bytes = chunk.as_ptr_range();
-
-    let is_in_the_chunk = |bytes: &[u8]| {
-        let bytes = bytes.as_ptr_range();
-        chunk_bytes.start <= bytes.start && bytes.end <= chunk_bytes.end
-    };
+    let json = br#"{"user":{"name":"John"},"tags":["a","b"]}"#;
 
     block_on(async {
-        let mut reader = JsonFirstLineIteratorAsync::new(Chunks::new(vec![Ok(chunk.clone())]));
+        let mut reader = JsonFirstLineIteratorAsync::new(Chunks::cut(json, json.len()));
 
         let (key, value) = reader.get_next().await.unwrap().unwrap();
-        assert!(is_in_the_chunk(key.as_slice()));
-        assert!(is_in_the_chunk(value.as_slice()));
+        let (user_key, user_value) = (key.as_slice().as_ptr(), value.as_slice().as_ptr());
+        assert_eq!(user_key.wrapping_add(key.as_slice().len() + 1), user_value);
+        let user_value_end = user_value.wrapping_add(value.as_slice().len());
 
         assert_eq!(key.as_str().unwrap().as_str(), "user");
         let user = value.unwrap_as_object().unwrap();
@@ -246,8 +246,11 @@ fn a_key_and_a_value_are_not_copied() {
         assert_eq!(value.as_str().unwrap().as_str(), "John");
 
         let (key, value) = reader.get_next().await.unwrap().unwrap();
-        assert!(is_in_the_chunk(key.as_slice()));
-        assert!(is_in_the_chunk(value.as_slice()));
+        assert_eq!(user_value_end.wrapping_add(1), key.as_slice().as_ptr());
+        assert_eq!(
+            key.as_slice().as_ptr().wrapping_add(key.as_slice().len() + 1),
+            value.as_slice().as_ptr()
+        );
 
         assert_eq!(key.as_str().unwrap().as_str(), "tags");
         let tags = value.unwrap_as_array().unwrap();
@@ -257,6 +260,25 @@ fn a_key_and_a_value_are_not_copied() {
 
         assert!(reader.get_next().await.is_none());
     });
+}
+
+/// A `DoubleBuffer` is the stream the readers are made for: a socket is read into one of its two
+/// buffers while the other is parsed. A buffer is read into again only once its chunk is dropped,
+/// and the reader holds none of them - however the keys and values are cut by the buffers.
+#[test]
+fn async_and_sync_agree_over_a_double_buffer() {
+    let from_the_file = std::fs::read_to_string("test.json").unwrap();
+    let json = format!(r#"{{"before":1,"items":{},"after":"end"}}"#, from_the_file);
+    let expected = read_sync(json.as_bytes());
+
+    for buffer_size in [1, 2, 3, 7, 64, 4096] {
+        assert_eq!(
+            expected,
+            read_from::<DoubleBufferError, _>(common::double_buffer(json.as_bytes(), buffer_size)),
+            "buffers of {} bytes",
+            buffer_size
+        );
+    }
 }
 
 /// A key and its value are handed over as soon as the last byte of the value is read - not once
@@ -332,9 +354,9 @@ fn a_stream_with_no_object_in_it_is_an_error_not_a_panic() {
 #[test]
 fn a_stream_error_is_returned_as_it_is_and_the_reading_goes_on() {
     let stream = Chunks::new(vec![
-        Ok(Bytes::from_static(b"{\"a\":1,\"b\":\"te")),
+        Ok(b"{\"a\":1,\"b\":\"te".to_vec()),
         Err("no connection".to_string()),
-        Ok(Bytes::from_static(b"xt\"}")),
+        Ok(b"xt\"}".to_vec()),
     ]);
 
     block_on(async {
@@ -408,7 +430,7 @@ fn the_reader_is_read_from_another_thread() {
         value
     }
 
-    let stream: Arc<dyn AsyncBytesStream<String> + Send + Sync + 'static> =
+    let stream: Arc<dyn AsyncBytesStream<String, Chunk = Vec<u8>> + Send + Sync + 'static> =
         Arc::new(Chunks::of(&["{\"a\":", "1}"]));
 
     let mut reader = assert_send(JsonFirstLineIteratorAsync::new(stream));

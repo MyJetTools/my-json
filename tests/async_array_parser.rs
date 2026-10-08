@@ -12,11 +12,12 @@ use std::sync::Arc;
 
 use common::{block_on, Chunks};
 use my_json::json_reader::{JsonArrayIteratorAsync, JsonStreamError, JsonValueRef};
-use rust_extensions::bytes::Bytes;
-use rust_extensions::AsyncBytesStream;
+use rust_extensions::{AsyncBytesStream, DoubleBufferError};
 
 /// Items as strings, or the error - the shape both paths are compared on.
-fn as_comparable(item: Result<JsonValueRef<'_>, JsonStreamError<String>>) -> Result<String, String> {
+fn as_comparable<TError: std::fmt::Display>(
+    item: Result<JsonValueRef<'_>, JsonStreamError<TError>>,
+) -> Result<String, String> {
     match item {
         Ok(item) => Ok(String::from_utf8_lossy(item.as_slice()).to_string()),
         Err(JsonStreamError::Json(err)) => Err(err.to_string()),
@@ -24,9 +25,15 @@ fn as_comparable(item: Result<JsonValueRef<'_>, JsonStreamError<String>>) -> Res
     }
 }
 
+fn read_async(stream: Chunks) -> Vec<Result<String, String>> {
+    read_from::<String, _>(stream)
+}
+
 /// Reads until the iterator says the array is over - an error does not stop the loop, the
 /// iterator has to.
-fn read_async(stream: Chunks) -> Vec<Result<String, String>> {
+fn read_from<TError: std::fmt::Display, TStream: AsyncBytesStream<TError>>(
+    stream: TStream,
+) -> Vec<Result<String, String>> {
     block_on(async {
         let mut iterator = JsonArrayIteratorAsync::new(stream);
 
@@ -231,28 +238,19 @@ fn an_item_cut_between_chunks_is_returned_whole() {
     );
 }
 
-/// An item is handed out of the buffer the stream is read into, not copied out of it: the items
-/// of a chunk nothing is joined to are the bytes of that very chunk. They are read further with
-/// the sync API as they are.
+/// An item is not copied out of the buffer of the reader: the items that came in one chunk are
+/// where they are in it, one after another. They are read further with the sync API as they are.
 #[test]
 fn an_item_is_not_copied() {
-    let chunk = Bytes::from(br#"[{"id":1},"str",[1,2]]"#.to_vec());
-    let chunk_bytes = chunk.as_ptr_range();
+    let json = br#"[{"id":1},"str",[1,2]]"#;
 
     block_on(async {
-        let mut iterator = JsonArrayIteratorAsync::new(Chunks::new(vec![Ok(chunk.clone())]));
+        let mut iterator = JsonArrayIteratorAsync::new(Chunks::cut(json, json.len()));
 
         let mut items = Vec::new();
 
         while let Some(item) = iterator.get_next().await {
             let item = item.unwrap();
-            let item_bytes = item.as_slice().as_ptr_range();
-
-            assert!(
-                chunk_bytes.start <= item_bytes.start && item_bytes.end <= chunk_bytes.end,
-                "{} is a copy",
-                String::from_utf8_lossy(item.as_slice())
-            );
 
             if item.is_object() {
                 let object = item.unwrap_as_object().unwrap();
@@ -262,11 +260,37 @@ fn an_item_is_not_copied() {
                 assert_eq!(value.as_slice(), b"1");
             }
 
-            items.push(String::from_utf8_lossy(item.as_slice()).to_string());
+            let text = String::from_utf8_lossy(item.as_slice()).to_string();
+            items.push((item.as_slice().as_ptr(), text));
         }
 
-        assert_eq!(items, [r#"{"id":1}"#, r#""str""#, "[1,2]"]);
+        let texts: Vec<_> = items.iter().map(|(_, text)| text.as_str()).collect();
+        assert_eq!(texts, [r#"{"id":1}"#, r#""str""#, "[1,2]"]);
+
+        // An item begins a byte - the `,` - after the end of the one before it
+        for pair in items.windows(2) {
+            let (before, before_text) = &pair[0];
+            assert_eq!(before.wrapping_add(before_text.len() + 1), pair[1].0);
+        }
     });
+}
+
+/// A `DoubleBuffer` is the stream the readers are made for: a socket is read into one of its two
+/// buffers while the other is parsed. A buffer is read into again only once its chunk is dropped,
+/// and the iterator holds none of them - however the items are cut by the buffers.
+#[test]
+fn async_and_sync_agree_over_a_double_buffer() {
+    let json = std::fs::read("test.json").unwrap();
+    let expected = read_sync(&json);
+
+    for buffer_size in [1, 2, 3, 7, 64, 4096] {
+        assert_eq!(
+            expected,
+            read_from::<DoubleBufferError, _>(common::double_buffer(&json, buffer_size)),
+            "buffers of {} bytes",
+            buffer_size
+        );
+    }
 }
 
 /// An item is handed over as soon as its last byte is read - not once the stream has more to give.
@@ -343,9 +367,9 @@ fn a_stream_with_no_array_in_it_is_an_error_not_a_panic() {
 #[test]
 fn a_stream_error_is_returned_as_it_is_and_the_reading_goes_on() {
     let stream = Chunks::new(vec![
-        Ok(Bytes::from_static(b"[{\"id\":1},{\"i")),
+        Ok(b"[{\"id\":1},{\"i".to_vec()),
         Err("no connection".to_string()),
-        Ok(Bytes::from_static(b"d\":2}]")),
+        Ok(b"d\":2}]".to_vec()),
     ]);
 
     block_on(async {
@@ -419,7 +443,7 @@ fn the_iterator_is_read_from_another_thread() {
         value
     }
 
-    let stream: Arc<dyn AsyncBytesStream<String> + Send + Sync + 'static> =
+    let stream: Arc<dyn AsyncBytesStream<String, Chunk = Vec<u8>> + Send + Sync + 'static> =
         Arc::new(Chunks::of(&["[1,", "2]"]));
 
     let mut iterator = assert_send(JsonArrayIteratorAsync::new(stream));
